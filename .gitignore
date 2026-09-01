@@ -1,0 +1,28 @@
+# Maven
+bazario-backend/target/
+bazario-backend/.mvn/wrapper/maven-wrapper.jar
+
+# Node
+bazario-frontend/node_modules/
+bazario-frontend/dist/
+
+# Uploads (user files — don't commit)
+bazario-backend/uploads/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.local
+.env.production.local
+
+# Logs
+*.log
