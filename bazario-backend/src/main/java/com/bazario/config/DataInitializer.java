@@ -327,6 +327,7 @@ public class DataInitializer implements ApplicationRunner {
                 .libelle(libelle).description(description)
                 .prix(BigDecimal.valueOf(prix)).prixActif(true).deleted(false)
                 .categorie(categorie).marque(marque)
+                .approvedByAdmin(true)
                 .createdBy(createdBy).build();
     }
 }

@@ -34,7 +34,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("""
         SELECT p FROM Product p
         WHERE p.deleted = false
-          AND (:q IS NULL OR LOWER(p.libelle) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%',:q,'%')))
+          AND (CAST(:q AS string) IS NULL OR LOWER(p.libelle) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')))
         """)
     Page<Product> searchProducts(@Param("q") String q, Pageable pageable);
 
@@ -43,9 +43,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         SELECT p FROM Product p
         WHERE p.deleted = false
           AND p.approvedByAdmin = true
-          AND (:q IS NULL OR LOWER(p.libelle) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%',:q,'%')))
-          AND (:categorie IS NULL OR p.categorie = :categorie)
-          AND (:marque IS NULL OR p.marque = :marque)
+          AND (CAST(:q AS string) IS NULL OR LOWER(p.libelle) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')))
+          AND (CAST(:categorie AS string) IS NULL OR p.categorie = CAST(:categorie AS string))
+          AND (CAST(:marque AS string) IS NULL OR p.marque = CAST(:marque AS string))
           AND (:minPrix IS NULL OR p.prix >= :minPrix)
           AND (:maxPrix IS NULL OR p.prix <= :maxPrix)
         """,
@@ -53,9 +53,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         SELECT COUNT(p) FROM Product p
         WHERE p.deleted = false
           AND p.approvedByAdmin = true
-          AND (:q IS NULL OR LOWER(p.libelle) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%',:q,'%')))
-          AND (:categorie IS NULL OR p.categorie = :categorie)
-          AND (:marque IS NULL OR p.marque = :marque)
+          AND (CAST(:q AS string) IS NULL OR LOWER(p.libelle) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')))
+          AND (CAST(:categorie AS string) IS NULL OR p.categorie = CAST(:categorie AS string))
+          AND (CAST(:marque AS string) IS NULL OR p.marque = CAST(:marque AS string))
           AND (:minPrix IS NULL OR p.prix >= :minPrix)
           AND (:maxPrix IS NULL OR p.prix <= :maxPrix)
         """)
