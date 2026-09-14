@@ -48,7 +48,6 @@ export interface User {
 }
 
 export type UniteKey = 'PIECE' | 'METRE' | 'BOBINE' | 'LOT';
-export type CategorieKey = string;
 
 export type VariantType = 'SIZE' | 'COLOR' | 'STORAGE';
 
@@ -77,7 +76,7 @@ export interface Product {
   prixPromo: number | null;
   reference: string | null;
   marque: string | null;
-  categorie: CategorieKey | null;
+  categories: string[];
   unite: UniteKey;
   quantiteMin: number;
   createdById: number | null;
@@ -89,7 +88,7 @@ export interface Product {
   approvedByAdmin?: boolean;
 }
 
-export type CommandStatus = 'EN_ATTENTE' | 'CONFIRMEE' | 'EN_PREPARATION' | 'EXPEDIEE' | 'LIVREE' | 'VALIDEE' | 'REFUSEE' | 'ANNULEE';
+export type CommandStatus = 'EN_ATTENTE' | 'CONFIRMEE' | 'EN_PREPARATION' | 'EXPEDIEE' | 'EN_ROUTE' | 'LIVREE' | 'RETOURNEE' | 'VALIDEE' | 'REFUSEE' | 'ANNULEE';
 export type CommandType = 'COMMANDE' | 'DEMANDE_INFO';
 
 export interface CommandItem {
@@ -109,6 +108,7 @@ export interface Command {
   id: number;
   nom: string;
   prenom: string;
+  adresse?: string;
   telephone: string;
   email?: string;
   status: CommandStatus;

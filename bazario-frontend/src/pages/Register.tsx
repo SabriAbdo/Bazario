@@ -1,4 +1,4 @@
-﻿import { Container, Box, Paper, Typography, TextField, Button, Link as MuiLink, Divider, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+﻿import { Box, Paper, Typography, TextField, Button, Link as MuiLink, Divider, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -47,7 +47,8 @@ export default function Register() {
   };
 
   return (
-    <Container maxWidth="xs" sx={{ py: 8 }}>
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 8 }}>
+      <Box sx={{ maxWidth: 440, mx: 'auto' }}>
       <Paper sx={{ p: 4, borderRadius: 3 }}>
         <Typography variant="h2" gutterBottom textAlign="center">{t('auth.register_title')}</Typography>
         <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
@@ -104,6 +105,7 @@ export default function Register() {
           <MuiLink component={Link} to="/login">{t('auth.login_link')}</MuiLink>
         </Typography>
       </Paper>
-    </Container>
+      </Box>
+    </Box>
   );
 }

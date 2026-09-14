@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import {
   Box, Typography, Paper, TextField, Button, Switch, FormControlLabel,
-  CircularProgress, Alert, alpha, IconButton, Tooltip, MenuItem, InputAdornment,
+  CircularProgress, Alert, alpha, IconButton, Tooltip, MenuItem, InputAdornment, Chip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
@@ -22,7 +22,7 @@ export default function EditProduit() {
   const qc = useQueryClient();
   const [form, setForm] = useState({
     libelle: '', description: '', prix: '', prixActif: true,
-    prixPromo: '', reference: '', marque: '', categorie: '', unite: 'PIECE', quantiteMin: '1',
+    prixPromo: '', reference: '', marque: '', categories: [] as string[], unite: 'PIECE', quantiteMin: '1',
   });
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
@@ -45,7 +45,7 @@ export default function EditProduit() {
     mutationFn: (label: string) => categoryApi.create(label),
     onSuccess: (cat) => {
       qc.invalidateQueries({ queryKey: ['categories'] });
-      setForm((f) => ({ ...f, categorie: cat.slug }));
+      setForm((f) => ({ ...f, categories: [...f.categories, cat.slug] }));
       setNewCatInput('');
       setShowNewCat(false);
       toast.success(`Catégorie "${cat.label}" ajoutée`);
@@ -63,7 +63,7 @@ export default function EditProduit() {
         prixPromo: product.prixPromo != null ? String(product.prixPromo) : '',
         reference: product.reference ?? '',
         marque: product.marque ?? '',
-        categorie: product.categorie ?? '',
+        categories: product.categories ?? [],
         unite: product.unite ?? 'PIECE',
         quantiteMin: String(product.quantiteMin ?? 1),
       });
@@ -100,7 +100,7 @@ export default function EditProduit() {
         prixPromo: form.prixPromo ? parseFloat(form.prixPromo) : undefined,
         reference: form.reference || undefined,
         marque: form.marque || undefined,
-        categorie: form.categorie || undefined,
+        categories: form.categories,
         unite: form.unite,
         quantiteMin: parseInt(form.quantiteMin) || 1,
       });
@@ -171,9 +171,25 @@ export default function EditProduit() {
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
-            select label="Catégorie" fullWidth value={form.categorie}
-            onChange={(e) => setForm({ ...form, categorie: e.target.value })}>
-            <MenuItem value="">— Non spécifiée —</MenuItem>
+            select label="Catégories" fullWidth value={form.categories}
+            onChange={(e) => {
+              const value = e.target.value;
+              setForm({ ...form, categories: typeof value === 'string' ? value.split(',') : value });
+            }}
+            SelectProps={{
+              multiple: true,
+              renderValue: (selected) => {
+                const slugs = selected as string[];
+                if (slugs.length === 0) return <em>Sans catégorie</em>;
+                return (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {slugs.map((slug) => (
+                      <Chip key={slug} size="small" label={categories.find((c) => c.slug === slug)?.label ?? slug} />
+                    ))}
+                  </Box>
+                );
+              },
+            }}>
             {categories.map((c) => (
               <MenuItem key={c.slug} value={c.slug}>{c.label}</MenuItem>
             ))}

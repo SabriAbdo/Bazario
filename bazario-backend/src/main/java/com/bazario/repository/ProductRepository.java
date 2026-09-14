@@ -40,21 +40,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     /** Public catalogue: only approved, active, non-deleted products */
     @Query(value = """
-        SELECT p FROM Product p
+        SELECT DISTINCT p FROM Product p LEFT JOIN p.categories c
         WHERE p.deleted = false
           AND p.approvedByAdmin = true
           AND (CAST(:q AS string) IS NULL OR LOWER(p.libelle) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')))
-          AND (CAST(:categorie AS string) IS NULL OR p.categorie = CAST(:categorie AS string))
+          AND (CAST(:categorie AS string) IS NULL OR c.slug = CAST(:categorie AS string))
           AND (CAST(:marque AS string) IS NULL OR p.marque = CAST(:marque AS string))
           AND (:minPrix IS NULL OR p.prix >= :minPrix)
           AND (:maxPrix IS NULL OR p.prix <= :maxPrix)
         """,
         countQuery = """
-        SELECT COUNT(p) FROM Product p
+        SELECT COUNT(DISTINCT p) FROM Product p LEFT JOIN p.categories c
         WHERE p.deleted = false
           AND p.approvedByAdmin = true
           AND (CAST(:q AS string) IS NULL OR LOWER(p.libelle) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%',CAST(:q AS string),'%')))
-          AND (CAST(:categorie AS string) IS NULL OR p.categorie = CAST(:categorie AS string))
+          AND (CAST(:categorie AS string) IS NULL OR c.slug = CAST(:categorie AS string))
           AND (CAST(:marque AS string) IS NULL OR p.marque = CAST(:marque AS string))
           AND (:minPrix IS NULL OR p.prix >= :minPrix)
           AND (:maxPrix IS NULL OR p.prix <= :maxPrix)

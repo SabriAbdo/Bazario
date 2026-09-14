@@ -28,12 +28,12 @@ public class ProductDto {
     public record CreateRequest(
             @NotBlank @Size(max = 255) String libelle,
             String description,
-            @NotNull @DecimalMin("0.01") BigDecimal prix,
+            @NotNull @DecimalMin("0.01") @Digits(integer = 16, fraction = 2) BigDecimal prix,
             Boolean prixActif,
-            @DecimalMin("0.01") BigDecimal prixPromo,
+            @DecimalMin("0.01") @Digits(integer = 16, fraction = 2) BigDecimal prixPromo,
             @Size(max = 100) String reference,
             @Size(max = 100) String marque,
-            @Size(max = 50) String categorie,
+            List<String> categories,
             Unite unite,
             Integer quantiteMin
     ) {}
@@ -41,12 +41,12 @@ public class ProductDto {
     public record UpdateRequest(
             @Size(max = 255) String libelle,
             String description,
-            @DecimalMin("0.01") BigDecimal prix,
+            @DecimalMin("0.01") @Digits(integer = 16, fraction = 2) BigDecimal prix,
             Boolean prixActif,
-            @DecimalMin("0.01") BigDecimal prixPromo,
+            @DecimalMin("0.01") @Digits(integer = 16, fraction = 2) BigDecimal prixPromo,
             @Size(max = 100) String reference,
             @Size(max = 100) String marque,
-            @Size(max = 50) String categorie,
+            List<String> categories,
             Unite unite,
             Integer quantiteMin
     ) {}
@@ -60,7 +60,7 @@ public class ProductDto {
             BigDecimal prixPromo,
             String reference,
             String marque,
-            String categorie,
+            List<String> categories,
             Unite unite,
             int quantiteMin,
             Long createdById,

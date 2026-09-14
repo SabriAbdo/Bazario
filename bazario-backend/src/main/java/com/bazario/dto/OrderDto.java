@@ -15,6 +15,7 @@ public class OrderDto {
     public record PlaceRequest(
             @NotBlank String nom,
             @NotBlank String prenom,
+            @NotBlank String adresse,
             @NotBlank @Pattern(regexp = "^[+0-9 \\-]{6,20}$") String telephone,
             @Email String email,
             @NotEmpty List<ItemRequest> items
@@ -58,5 +59,5 @@ public class OrderDto {
             String changedBy
     ) {}
 
-    public record StatusUpdateRequest(Order.OrderStatus status) {}
+    public record StatusUpdateRequest(@jakarta.validation.constraints.NotNull Order.OrderStatus status) {}
 }

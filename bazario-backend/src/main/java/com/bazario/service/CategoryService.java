@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -66,6 +67,15 @@ public class CategoryService {
             throw new RuntimeException("Erreur lors de l'upload de l'image", e);
         }
         return toDto(repo.save(cat));
+    }
+
+    /** Deletes a category, detaching it from any products that reference it first. */
+    @Transactional
+    public void delete(Long id) {
+        Category cat = repo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Catégorie introuvable"));
+        repo.unlinkFromProducts(id);
+        repo.delete(cat);
     }
 
     private CategoryDto.Response toDto(Category c) {

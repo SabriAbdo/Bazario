@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Container, Grid, Box, Typography, Button, Rating, Chip,
+  Grid, Box, Typography, Button, Rating, Chip,
   TextField, Divider, Alert,
 } from '@mui/material';
 import { ShoppingCart } from '@mui/icons-material';
@@ -8,12 +8,14 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '@/api/productApi';
 import { reviewApi } from '@/api/miscApi';
+import { categoryApi } from '@/api/miscApi';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { formatDate } from '@/utils/formatCurrency';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { buildCategoryDisplays, findCategoryDisplays } from '@/utils/categoryDisplay';
 import PageLoader from '@/components/common/PageLoader';
-import { Review } from '@/types';
+import { Category, Review } from '@/types';
 import toast from 'react-hot-toast';
 
 export default function ProductDetail() {
@@ -40,6 +42,11 @@ export default function ProductDetail() {
     enabled: !!productId,
   });
 
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: () => categoryApi.getAll(),
+  });
+
   const submitReview = useMutation({
     mutationFn: () => reviewApi.createReview(productId, { rating: reviewRating!, comment: reviewComment }),
     onSuccess: () => {
@@ -57,6 +64,7 @@ export default function ProductDetail() {
   const displayPrice = hasPromo ? product.prixPromo! : product.prix;
   const images = product.images ?? [];
   const minQty = product.quantiteMin ?? 1;
+  const productCats = findCategoryDisplays(buildCategoryDisplays(categories), product.categories);
 
   const handleAddToCart = () => {
     addItem(product, qty);
@@ -64,7 +72,7 @@ export default function ProductDetail() {
   };
 
   return (
-    <Container maxWidth="lg">
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Grid container spacing={4}>
         {/* Images */}
         <Grid item xs={12} md={6}>
@@ -99,7 +107,7 @@ export default function ProductDetail() {
         <Grid item xs={12} md={6}>
           <Typography variant="h2" gutterBottom>{product.libelle}</Typography>
           <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-            {product.categorie && <Chip label={product.categorie} size="small" />}
+            {productCats.map((c) => <Chip key={c.key} label={c.label} size="small" />)}
             {product.marque && <Chip label={product.marque} size="small" variant="outlined" />}
             {product.createdByName && (
               <Chip label={`Vendeur: ${product.createdByName}`} size="small" variant="outlined" />
@@ -196,6 +204,6 @@ export default function ProductDetail() {
           <Typography color="text.secondary">Aucun avis pour ce produit.</Typography>
         )}
       </Box>
-    </Container>
+    </Box>
   );
 }

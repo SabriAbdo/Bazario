@@ -44,6 +44,7 @@ export const categoryApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data);
   },
+  delete: (id: number) => axiosClient.delete(`/categories/${id}`),
 };
 
 export const sellerApi = {

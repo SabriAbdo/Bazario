@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Container, Typography, Box, Paper, TextField, Button, Chip, InputAdornment, Avatar,
+  Typography, Box, Paper, TextField, Button, Chip, InputAdornment, Avatar,
   TablePagination, TableSortLabel, Table, TableHead, TableBody, TableRow, TableCell,
   LinearProgress, alpha, Dialog, DialogTitle, DialogContent, DialogActions,
   FormControl, InputLabel, Select, MenuItem, IconButton, Tooltip,
@@ -122,7 +122,7 @@ export default function AdminUsers() {
   );
 
   return (
-    <Container maxWidth="lg">
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Typography variant="h2" gutterBottom>Utilisateurs</Typography>
       <TextField
         placeholder="Rechercher..." value={q}
@@ -235,7 +235,7 @@ export default function AdminUsers() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 }
 

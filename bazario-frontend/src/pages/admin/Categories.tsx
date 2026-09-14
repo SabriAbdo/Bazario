@@ -1,17 +1,21 @@
 import { useRef, useState } from 'react';
-import { Container, Typography, Box, Paper, Button, TextField, IconButton, Tooltip, Avatar } from '@mui/material';
+import { Typography, Box, Paper, Button, TextField, IconButton, Tooltip, Avatar } from '@mui/material';
 import { Add, Delete, PhotoCamera } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoryApi } from '@/api/miscApi';
 import { Category } from '@/types';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/store/useAuthStore';
 
 // Empty in dev (Vite proxy) and same-origin prod; set VITE_API_BASE_URL for cross-origin deploys
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 export default function AdminCategories() {
   const qc = useQueryClient();
+  const { user } = useAuthStore();
+  // OPERATEUR gets read-only access so they can consult the photos added by the stock manager
+  const canEdit = user?.role === 'ADMIN';
   const [showForm, setShowForm] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -48,6 +52,16 @@ export default function AdminCategories() {
     onError: () => toast.error('Erreur lors de l\'upload'),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => categoryApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Catégorie supprimée');
+    },
+    onError: () => toast.error('Erreur lors de la suppression'),
+  });
+
   const handleCreateImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -64,15 +78,17 @@ export default function AdminCategories() {
   };
 
   return (
-    <Container maxWidth="md">
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center' }}>
         <Typography variant="h2">Catégories</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => setShowForm(!showForm)}>
-          Ajouter
-        </Button>
+        {canEdit && (
+          <Button variant="contained" startIcon={<Add />} onClick={() => setShowForm(!showForm)}>
+            Ajouter
+          </Button>
+        )}
       </Box>
 
-      {showForm && (
+      {showForm && canEdit && (
         <Paper sx={{ p: 3, borderRadius: 3, mb: 3 }}>
           <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>Nouvelle catégorie</Typography>
           <Box component="form" onSubmit={handleSubmit((d) => createMutation.mutate(d))} sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
@@ -85,7 +101,7 @@ export default function AdminCategories() {
               <Box
                 onClick={() => createFileRef.current?.click()}
                 sx={{
-                  width: 56, height: 56, borderRadius: 2, border: '2px dashed',
+                  width: 96, height: 96, borderRadius: 2, border: '2px dashed',
                   borderColor: imagePreview ? 'primary.main' : 'divider',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', overflow: 'hidden', flexShrink: 0,
@@ -94,7 +110,7 @@ export default function AdminCategories() {
               >
                 {imagePreview
                   ? <Box component="img" src={imagePreview} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <PhotoCamera color="action" />}
+                  : <PhotoCamera color="action" sx={{ fontSize: 32 }} />}
               </Box>
             </Tooltip>
             {imagePreview && (
@@ -122,41 +138,46 @@ export default function AdminCategories() {
               />
               <Tooltip title="Changer l'image">
                 <Box
-                  onClick={() => rowFileRefs.current[cat.id]?.click()}
+                  onClick={() => canEdit && rowFileRefs.current[cat.id]?.click()}
                   sx={{
-                    width: 40, height: 40, borderRadius: 1.5, overflow: 'hidden',
-                    cursor: 'pointer', position: 'relative',
+                    width: 88, height: 88, borderRadius: 2, overflow: 'hidden',
+                    cursor: canEdit ? 'pointer' : 'default', position: 'relative',
                     border: '1.5px dashed', borderColor: 'divider',
-                    '&:hover .overlay': { opacity: 1 },
+                    '&:hover .overlay': { opacity: canEdit ? 1 : 0 },
                   }}
                 >
                   {cat.imageUrl
                     ? <Box component="img" src={`${API_BASE}${cat.imageUrl}`} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover' }}>
-                        <PhotoCamera fontSize="small" color="disabled" />
+                        <PhotoCamera color="disabled" sx={{ fontSize: 28 }} />
                       </Box>
                   }
                   {/* hover overlay */}
-                  <Box className="overlay" sx={{
-                    position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.45)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    opacity: 0, transition: 'opacity .15s',
-                  }}>
-                    <PhotoCamera sx={{ color: '#fff', fontSize: 16 }} />
-                  </Box>
+                  {canEdit && (
+                    <Box className="overlay" sx={{
+                      position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.45)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: 0, transition: 'opacity .15s',
+                    }}>
+                      <PhotoCamera sx={{ color: '#fff', fontSize: 20 }} />
+                    </Box>
+                  )}
                 </Box>
               </Tooltip>
               <Typography fontWeight={600}>{cat.label}</Typography>
             </Box>
-            <Tooltip title="Supprimer">
-              <IconButton color="error" size="small" onClick={() => { if (confirm('Supprimer ?')) toast.error('Suppression non disponible'); }}>
-                <Delete fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            {canEdit && (
+              <Tooltip title="Supprimer">
+                <IconButton color="error" size="small" disabled={deleteMutation.isPending}
+                  onClick={() => { if (confirm(`Supprimer la catégorie "${cat.label}" ? Les produits associés ne seront pas supprimés.`)) deleteMutation.mutate(cat.id); }}>
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
           </Paper>
         ))}
       </Box>
-    </Container>
+    </Box>
   );
 }
 

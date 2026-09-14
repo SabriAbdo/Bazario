@@ -15,6 +15,7 @@ import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '../../api/productApi';
+import { formatCategoryList } from '../../utils/categoryDisplay';
 import toast from 'react-hot-toast';
 import TableSkeleton from '../../components/common/TableSkeleton';
 
@@ -44,7 +45,7 @@ export default function StockProduits() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => productApi.delete(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['mes-produits'] }); toast.success('Produit d�plac� en corbeille'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['mes-produits'] }); toast.success('Produit déplacé en corbeille'); },
     onError: () => toast.error('Erreur lors de la suppression'),
   });
 
@@ -70,7 +71,7 @@ export default function StockProduits() {
           </Box>
           <Box>
             <Typography variant="h4">Mes Produits</Typography>
-            <Typography variant="body2" color="text.secondary">{total} produit{total > 1 ? 's' : ''} enregistr�{total > 1 ? 's' : ''}</Typography>
+            <Typography variant="body2" color="text.secondary">{total} produit{total > 1 ? 's' : ''} enregistré{total > 1 ? 's' : ''}</Typography>
           </Box>
         </Box>
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/stock/produits/nouveau')}>
@@ -95,15 +96,15 @@ export default function StockProduits() {
           <TableHead>
             <TableRow sx={{ bgcolor: '#0D1E36' }}>
               <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5, width: 68 }}>Photo</TableCell>
-              <SortableCell field="libelle" label="Libell�" />
-              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Marque � R�f.</TableCell>
-              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Cat�gorie</TableCell>
+              <SortableCell field="libelle" label="Libellé" />
+              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Marque — Réf.</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Catégorie</TableCell>
               <SortableCell field="prix" label="Prix (MAD)" />
-              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Unit� � Qt� min</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Unité — Qté min</TableCell>
               <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Variantes</TableCell>
               <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Approbation</TableCell>
               <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Catalogue</TableCell>
-              <SortableCell field="createdAt" label="Cr�� le" />
+              <SortableCell field="createdAt" label="Créé le" />
               <TableCell align="center" sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -134,26 +135,26 @@ export default function StockProduits() {
                 <TableCell sx={{ fontSize: '0.82rem' }}>
                   {p.marque && <Typography variant="body2" fontWeight={500}>{p.marque}</Typography>}
                   {p.reference && <Typography variant="caption" fontFamily="monospace" color="text.secondary">{p.reference}</Typography>}
-                  {!p.marque && !p.reference && <Typography variant="caption" color="text.disabled">�</Typography>}
+                  {!p.marque && !p.reference && <Typography variant="caption" color="text.disabled">—</Typography>}
                 </TableCell>
-                <TableCell sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>{p.categorie ?? '�'}</TableCell>
+                <TableCell sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>{formatCategoryList(p.categories)}</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   {p.prix.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}
                   {p.prixPromo && <Typography variant="caption" color="secondary.main" display="block">{p.prixPromo.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</Typography>}
                 </TableCell>
-                <TableCell sx={{ fontSize: '0.82rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>{p.unite} � {p.quantiteMin}</TableCell>
+                <TableCell sx={{ fontSize: '0.82rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>{p.unite} — {p.quantiteMin}</TableCell>
                 <TableCell>
                   {p.variants && p.variants.length > 0
                     ? <Chip label={`${p.variants.length} var.`} size="small" variant="outlined" />
-                    : <Typography variant="caption" color="text.disabled">�</Typography>}
+                    : <Typography variant="caption" color="text.disabled">—</Typography>}
                 </TableCell>
                 <TableCell>
                   {p.approvedByAdmin
-                    ? <Chip icon={<VerifiedIcon sx={{ fontSize: '14px !important' }} />} label="Approuv�" size="small" color="success" />
+                    ? <Chip icon={<VerifiedIcon sx={{ fontSize: '14px !important' }} />} label="Approuvé" size="small" color="success" />
                     : <Chip icon={<PendingActionsIcon sx={{ fontSize: '14px !important' }} />} label="En attente" size="small" color="warning" />}
                 </TableCell>
                 <TableCell>
-                  <Chip label={p.prixActif ? 'Visible' : 'Cach�'} color={p.prixActif ? 'success' : 'default'} size="small" />
+                  <Chip label={p.prixActif ? 'Visible' : 'Caché'} color={p.prixActif ? 'success' : 'default'} size="small" />
                 </TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                   {new Date(p.createdAt).toLocaleDateString('fr-FR')}
@@ -183,7 +184,7 @@ export default function StockProduits() {
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(0); }}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          labelRowsPerPage="Lignes :" labelDisplayedRows={({ from, to, count }) => `${from}�${to} sur ${count}`}
+          labelRowsPerPage="Lignes :" labelDisplayedRows={({ from, to, count }) => `${from}–${to} sur ${count}`}
         />
       </Paper>
     </Box>

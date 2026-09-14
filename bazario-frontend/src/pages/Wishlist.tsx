@@ -1,4 +1,4 @@
-import { Container, Typography, Box, Grid, Button } from '@mui/material';
+import { Typography, Box, Grid, Button } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { wishlistApi } from '@/api/miscApi';
 import { productApi } from '@/api/productApi';
@@ -20,7 +20,7 @@ export default function Wishlist() {
   if (isLoading) return <PageLoader />;
 
   return (
-    <Container maxWidth="lg">
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Typography variant="h2" gutterBottom>Liste de souhaits</Typography>
       {wishlistedIds.size === 0 ? (
         <Typography color="text.secondary">Votre liste de souhaits est vide.</Typography>
@@ -29,6 +29,6 @@ export default function Wishlist() {
           {wishlistedIds.size} produit(s) dans votre liste de souhaits.
         </Typography>
       )}
-    </Container>
+    </Box>
   );
 }

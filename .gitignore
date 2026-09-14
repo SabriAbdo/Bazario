@@ -6,6 +6,11 @@ bazario-backend/.mvn/wrapper/maven-wrapper.jar
 bazario-frontend/node_modules/
 bazario-frontend/dist/
 
+# Python
+bazario-backend/schemathesis/.venv/
+bazario-backend/schemathesis/__pycache__/
+**/__pycache__/
+
 # Uploads (user files — don't commit)
 bazario-backend/uploads/
 

@@ -23,6 +23,8 @@ const fr: any = {
     categories_title: 'Toutes les catégories',
     categories_subtitle: 'Retrouvez tous les types de produits sur Bazario',
     see_all_products: 'Voir tous les produits →',
+    best_sellers_title: 'Meilleures ventes',
+    best_sellers_subtitle: 'Les produits les plus populaires du moment',
     featured_title: 'Produits vedettes',
     featured_subtitle: 'Sélection de nos meilleurs produits',
     see_all: 'Voir tout →',

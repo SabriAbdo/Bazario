@@ -3,6 +3,8 @@ package com.bazario.controller;
 import com.bazario.dto.ProductDto;
 import com.bazario.service.ProductService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -10,14 +12,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
+@Validated
 public class ProductController {
 
     private final ProductService productService;
@@ -29,12 +34,19 @@ public class ProductController {
             @RequestParam(required = false) String marque,
             @RequestParam(required = false) BigDecimal minPrix,
             @RequestParam(required = false) BigDecimal maxPrix,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size,
             @RequestParam(defaultValue = "createdAt") String sort,
             @RequestParam(defaultValue = "desc") String sortDir) {
         return ResponseEntity.ok(productService.getProductsPaged(
                 q, categorie, marque, minPrix, maxPrix, page, size, sort, sortDir));
+    }
+
+    /** Best-selling products, ranked by total quantity sold across completed orders */
+    @GetMapping("/best-sellers")
+    public ResponseEntity<List<ProductDto.Response>> getBestSellers(
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int limit) {
+        return ResponseEntity.ok(productService.getBestSellers(limit));
     }
 
     @GetMapping("/{id}")
@@ -44,6 +56,7 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasRole('STOCK_OPERATEUR') or hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<ProductDto.Response> create(
             @Valid @RequestBody ProductDto.CreateRequest req,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -64,8 +77,8 @@ public class ProductController {
     @PreAuthorize("hasRole('STOCK_OPERATEUR') or hasRole('ADMIN')")
     public ResponseEntity<Page<ProductDto.Response>> getDeleted(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size,
             @RequestParam(defaultValue = "createdAt") String sort,
             @RequestParam(defaultValue = "desc") String sortDir) {
         return ResponseEntity.ok(productService.getDeletedProductsPaged(userDetails.getUsername(), page, size, sort, sortDir));
@@ -81,6 +94,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('STOCK_OPERATEUR') or hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> delete(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -108,6 +122,7 @@ public class ProductController {
 
     @PostMapping("/{id}/variants")
     @PreAuthorize("hasRole('STOCK_OPERATEUR') or hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<ProductDto.Response> addVariant(
             @PathVariable Long id,
             @Valid @RequestBody ProductDto.VariantRequest req,
@@ -129,8 +144,8 @@ public class ProductController {
     @PreAuthorize("hasRole('STOCK_OPERATEUR') or hasRole('ADMIN')")
     public ResponseEntity<Page<ProductDto.Response>> myProducts(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size,
             @RequestParam(defaultValue = "createdAt") String sort,
             @RequestParam(defaultValue = "desc") String sortDir,
             @RequestParam(required = false) String q) {

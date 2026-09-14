@@ -11,7 +11,7 @@ export interface CreateProductRequest {
   prixPromo?: number;
   reference?: string;
   marque?: string;
-  categorie?: string;
+  categories?: string[];
   unite?: string;
   quantiteMin?: number;
 }
@@ -39,6 +39,10 @@ export const productApi = {
   /** Paginated product list with optional faceted filters */
   getAll: (params: ProductFilters = {}) =>
     axiosClient.get<PagedResponse<Product>>('/products', { params }).then((r) => r.data),
+
+  /** Best-selling products ranked by total quantity sold */
+  getBestSellers: (limit = 10) =>
+    axiosClient.get<Product[]>('/products/best-sellers', { params: { limit } }).then((r) => r.data),
 
   /** Quick search returning Product[] */
   search: (q: string) =>

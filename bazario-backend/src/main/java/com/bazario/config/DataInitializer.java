@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -323,10 +324,12 @@ public class DataInitializer implements ApplicationRunner {
 
     private Product p(String libelle, String description, double prix,
                       String categorie, String marque, User createdBy) {
+        Category category = categorieRepository.findBySlugIn(List.of(categorie)).stream().findFirst().orElse(null);
         return Product.builder()
                 .libelle(libelle).description(description)
                 .prix(BigDecimal.valueOf(prix)).prixActif(true).deleted(false)
-                .categorie(categorie).marque(marque)
+                .categories(category != null ? new java.util.LinkedHashSet<>(Set.of(category)) : new java.util.LinkedHashSet<>())
+                .marque(marque)
                 .approvedByAdmin(true)
                 .createdBy(createdBy).build();
     }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Container, Typography, Box, TextField, InputAdornment, FormControl, InputLabel,
+  Typography, Box, TextField, InputAdornment, FormControl, InputLabel,
   Select, MenuItem, LinearProgress, Paper, Table, TableHead, TableBody, TableRow,
   TableCell, Chip, IconButton, Tooltip, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TablePagination, alpha, Divider,
@@ -15,8 +15,10 @@ import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '@/api/productApi';
+import { categoryApi } from '@/api/miscApi';
 import { adminApi } from '@/api/adminApi';
-import type { Product } from '@/types';
+import type { Category, Product } from '@/types';
+import { formatCategoryList } from '@/utils/categoryDisplay';
 import toast from 'react-hot-toast';
 import TableSkeleton from '@/components/common/TableSkeleton';
 
@@ -29,7 +31,7 @@ const SORT_OPTIONS = [
   { value: 'prix_desc', label: 'Prix décroissant' },
 ];
 
-function ProductDetailDialog({ product, onClose }: { product: Product; onClose: () => void }) {
+function ProductDetailDialog({ product, categories, onClose }: { product: Product; categories: Category[]; onClose: () => void }) {
   const qc = useQueryClient();
   const approveMutation = useMutation({
     mutationFn: () => adminApi.approveProduct(product.id),
@@ -66,7 +68,7 @@ function ProductDetailDialog({ product, onClose }: { product: Product; onClose: 
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
           <Box><Typography variant="caption" color="text.secondary">Référence</Typography><Typography fontFamily="monospace">{product.reference ?? '—'}</Typography></Box>
           <Box><Typography variant="caption" color="text.secondary">Marque</Typography><Typography>{product.marque ?? '—'}</Typography></Box>
-          <Box><Typography variant="caption" color="text.secondary">Catégorie</Typography><Typography>{product.categorie ?? '—'}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Catégorie</Typography><Typography>{formatCategoryList(product.categories, categories.map((c) => ({ key: c.slug, label: c.label, icon: null, color: '' })))}</Typography></Box>
           <Box><Typography variant="caption" color="text.secondary">Unité · Qté min</Typography><Typography>{product.unite} · {product.quantiteMin}</Typography></Box>
           <Box>
             <Typography variant="caption" color="text.secondary">Prix</Typography>
@@ -134,6 +136,11 @@ export default function AdminProducts() {
     enabled: filterApproval === 'pending',
   });
 
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: () => categoryApi.getAll(),
+  });
+
   const approveMutation = useMutation({
     mutationFn: (id: number) => adminApi.approveProduct(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin', 'products'] }); qc.invalidateQueries({ queryKey: ['admin-stats'] }); toast.success('Produit approuvé'); },
@@ -153,7 +160,7 @@ export default function AdminProducts() {
   const loading = filterApproval === 'pending' ? pendingLoading : isLoading;
 
   return (
-    <Container maxWidth="xl">
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Typography variant="h2" gutterBottom>Tous les produits</Typography>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -224,7 +231,7 @@ export default function AdminProducts() {
                   {p.marque && <Typography variant="caption" color="text.secondary" display="block">{p.marque}</Typography>}
                   {!p.reference && !p.marque && <Typography variant="caption" color="text.disabled">—</Typography>}
                 </TableCell>
-                <TableCell sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>{p.categorie ?? '—'}</TableCell>
+                <TableCell sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>{formatCategoryList(p.categories, categories.map((c) => ({ key: c.slug, label: c.label, icon: null, color: '' })))}</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: 'primary.main', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
                   {p.prix.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD
                   {p.prixPromo && <Typography variant="caption" color="secondary.main" display="block">{p.prixPromo.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD</Typography>}
@@ -285,8 +292,8 @@ export default function AdminProducts() {
         />
       </Paper>
 
-      {selectedProduct && <ProductDetailDialog product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
-    </Container>
+      {selectedProduct && <ProductDetailDialog product={selectedProduct} categories={categories} onClose={() => setSelectedProduct(null)} />}
+    </Box>
   );
 }
 

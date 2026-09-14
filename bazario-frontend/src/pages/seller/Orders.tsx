@@ -1,9 +1,9 @@
-import { Container, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 export default function SellerOrders() {
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Typography variant="h2">SellerOrders</Typography>
       <Typography color="text.secondary">Fonctionnalité disponible prochainement.</Typography>
-    </Container>
+    </Box>
   );
 }

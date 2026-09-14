@@ -1,4 +1,4 @@
-﻿import { Container, Typography, Box, Avatar, Paper, Chip, Divider } from '@mui/material';
+﻿import { Typography, Box, Avatar, Paper, Chip, Divider } from '@mui/material';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export default function Profile() {
@@ -7,7 +7,8 @@ export default function Profile() {
   if (!token || !user) return null;
 
   return (
-    <Container maxWidth="sm">
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
+      <Box sx={{ maxWidth: 600, mx: 'auto' }}>
       <Typography variant="h2" gutterBottom>Mon profil</Typography>
       <Paper sx={{ p: 4, borderRadius: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
@@ -25,6 +26,7 @@ export default function Profile() {
           La modification du profil sera disponible prochainement.
         </Typography>
       </Paper>
-    </Container>
+      </Box>
+    </Box>
   );
 }

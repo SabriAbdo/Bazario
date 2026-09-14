@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Box, Typography, Paper, TextField, Button, Switch, FormControlLabel,
-  CircularProgress, alpha, IconButton, Tooltip, MenuItem, InputAdornment, Alert, Collapse,
+  CircularProgress, alpha, IconButton, Tooltip, MenuItem, InputAdornment, Alert, Collapse, Chip,
 } from '@mui/material';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import InfoIcon from '@mui/icons-material/Info';
@@ -26,7 +26,7 @@ export default function NouveauProduit() {
 
   const [form, setForm] = useState({
     libelle: '', description: '', prix: '', prixActif: true,
-    prixPromo: '', reference: '', marque: '', categorie: '', unite: 'PIECE', quantiteMin: '1',
+    prixPromo: '', reference: '', marque: '', categories: [] as string[], unite: 'PIECE', quantiteMin: '1',
   });
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -60,12 +60,12 @@ export default function NouveauProduit() {
     mutationFn: (label: string) => categoryApi.create(label),
     onSuccess: (cat) => {
       qc.invalidateQueries({ queryKey: ['categories'] });
-      setForm((f) => ({ ...f, categorie: cat.slug }));
+      setForm((f) => ({ ...f, categories: [...f.categories, cat.slug] }));
       setNewCatInput('');
       setShowNewCat(false);
-      toast.success(`Cat�gorie "${cat.label}" ajout�e`);
+      toast.success(`Catégorie "${cat.label}" ajoutée`);
     },
-    onError: () => toast.error('Cat�gorie d�j� existante ou invalide'),
+    onError: () => toast.error('Catégorie déjà existante ou invalide'),
   });
 
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +92,7 @@ export default function NouveauProduit() {
         prixPromo: form.prixPromo ? parseFloat(form.prixPromo) : undefined,
         reference: form.reference || undefined,
         marque: form.marque || undefined,
-        categorie: form.categorie || undefined,
+        categories: form.categories,
         unite: form.unite,
         quantiteMin: parseInt(form.quantiteMin) || 1,
       });
@@ -102,10 +102,10 @@ export default function NouveauProduit() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mes-produits'] });
-      toast.success(isStockOp ? 'Produit cr�� � en attente d\'approbation admin' : 'Produit cr�� !');
+      toast.success(isStockOp ? 'Produit créé — en attente d\'approbation admin' : 'Produit créé !');
       navigate('/stock/produits');
     },
-    onError: () => toast.error('Erreur lors de la cr�ation'),
+    onError: () => toast.error('Erreur lors de la création'),
   });
 
   return (
@@ -123,32 +123,32 @@ export default function NouveauProduit() {
 
       {isStockOp && (
         <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 3 }}>
-          <strong>Validation requise</strong> � Ce produit sera soumis � l'approbation d'un administrateur avant d'appara�tre dans le catalogue public.
+          <strong>Validation requise</strong> — Ce produit sera soumis à l'approbation d'un administrateur avant d'apparaître dans le catalogue public.
         </Alert>
       )}
 
       {allowedSlugs && allowedSlugs.length > 0 && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          Vous �tes autoris� � cr�er des produits uniquement dans les cat�gories suivantes : <strong>{categories.map((c) => c.label).join(', ')}</strong>.
+          Vous êtes autorisé à créer des produits uniquement dans les catégories suivantes : <strong>{categories.map((c) => c.label).join(', ')}</strong>.
         </Alert>
       )}
 
       <Paper sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {/* Libell� */}
+        {/* Libellé */}
         <Box>
           <TextField
-            label="Libell�" required fullWidth value={form.libelle}
+            label="Libellé" required fullWidth value={form.libelle}
             onChange={(e) => setForm({ ...form, libelle: e.target.value })}
             placeholder="Ex: Disjoncteur iC60N 16A 2P"
           />
           <Collapse in={debouncedLibelle.length >= 3 && duplicates.length > 0}>
             <Alert severity="warning" icon={<WarningAmberIcon fontSize="small" />} sx={{ mt: 1, fontSize: '0.82rem' }}>
-              <strong>{duplicates.length} produit{duplicates.length > 1 ? 's' : ''} similaire{duplicates.length > 1 ? 's' : ''} d�j� dans le catalogue&nbsp;:</strong>
+              <strong>{duplicates.length} produit{duplicates.length > 1 ? 's' : ''} similaire{duplicates.length > 1 ? 's' : ''} déjà dans le catalogue&nbsp;:</strong>
               <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2 }}>
                 {duplicates.slice(0, 5).map((p) => (
                   <li key={p.id}>
-                    {p.libelle}{p.reference ? <> � <em>{p.reference}</em></> : null}
-                    {' � '}{p.prix.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD
+                    {p.libelle}{p.reference ? <> — <em>{p.reference}</em></> : null}
+                    {' — '}{p.prix.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD
                   </li>
                 ))}
               </Box>
@@ -159,7 +159,7 @@ export default function NouveauProduit() {
         <TextField
           label="Description" fullWidth multiline rows={3} value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="D�tails techniques, caract�ristiques..."
+          placeholder="Détails techniques, caractéristiques..."
         />
 
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2.5 }}>
@@ -177,7 +177,7 @@ export default function NouveauProduit() {
 
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2.5 }}>
           <TextField
-            label="R�f�rence / SKU" fullWidth value={form.reference}
+            label="Référence / SKU" fullWidth value={form.reference}
             onChange={(e) => setForm({ ...form, reference: e.target.value })}
             placeholder="Ex: SCH-iC60N-2P-20A"
           />
@@ -190,38 +190,54 @@ export default function NouveauProduit() {
 
         <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 2.5 }}>
           <TextField
-            select label="Cat�gorie" fullWidth value={form.categorie}
-            onChange={(e) => setForm({ ...form, categorie: e.target.value })}>
-            <MenuItem value="">� Non sp�cifi�e �</MenuItem>
+            select label="Catégories" fullWidth value={form.categories}
+            onChange={(e) => {
+              const value = e.target.value;
+              setForm({ ...form, categories: typeof value === 'string' ? value.split(',') : value });
+            }}
+            SelectProps={{
+              multiple: true,
+              renderValue: (selected) => {
+                const slugs = selected as string[];
+                if (slugs.length === 0) return <em>Sans catégorie</em>;
+                return (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {slugs.map((slug) => (
+                      <Chip key={slug} size="small" label={categories.find((c) => c.slug === slug)?.label ?? slug} />
+                    ))}
+                  </Box>
+                );
+              },
+            }}>
             {categories.map((c) => (
               <MenuItem key={c.slug} value={c.slug}>{c.label}</MenuItem>
             ))}
             {!isStockOp && (
               <MenuItem onClick={(e) => { e.stopPropagation(); setShowNewCat(true); }}
                 sx={{ color: 'primary.main', fontWeight: 600 }}>
-                <AddIcon sx={{ fontSize: 16, mr: 0.5 }} /> Ajouter une cat�gorie�
+                <AddIcon sx={{ fontSize: 16, mr: 0.5 }} /> Ajouter une catégorie…
               </MenuItem>
             )}
           </TextField>
           <TextField
-            select label="Unit�" fullWidth value={form.unite}
+            select label="Unité" fullWidth value={form.unite}
             onChange={(e) => setForm({ ...form, unite: e.target.value })}>
-            <MenuItem value="PIECE">Pi�ce</MenuItem>
-            <MenuItem value="METRE">M�tre</MenuItem>
+            <MenuItem value="PIECE">Pièce</MenuItem>
+            <MenuItem value="METRE">Mètre</MenuItem>
             <MenuItem value="BOBINE">Bobine</MenuItem>
             <MenuItem value="LOT">Lot</MenuItem>
           </TextField>
           <TextField
-            label="Qt� minimale" fullWidth type="number" value={form.quantiteMin}
+            label="Qté minimale" fullWidth type="number" value={form.quantiteMin}
             onChange={(e) => setForm({ ...form, quantiteMin: e.target.value })}
-            inputProps={{ min: 1, step: 1 }} helperText="Qt� min de commande"
+            inputProps={{ min: 1, step: 1 }} helperText="Qté min de commande"
           />
         </Box>
 
         {showNewCat && (
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
             <TextField
-              size="small" fullWidth label="Nom de la nouvelle cat�gorie"
+              size="small" fullWidth label="Nom de la nouvelle catégorie"
               value={newCatInput} onChange={(e) => setNewCatInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && newCatInput.trim()) addCategoryMutation.mutate(newCatInput.trim());
@@ -280,7 +296,7 @@ export default function NouveauProduit() {
             control={<Switch checked={form.prixActif} onChange={(e) => setForm({ ...form, prixActif: e.target.checked })} color="success" />}
             label={
               <Typography variant="body2" fontWeight={500}>
-                {form.prixActif ? 'Visible dans le catalogue (une fois approuv�)' : 'Masqu� du catalogue'}
+                {form.prixActif ? 'Visible dans le catalogue (une fois approuvé)' : 'Masqué du catalogue'}
               </Typography>
             }
           />
@@ -292,7 +308,7 @@ export default function NouveauProduit() {
           disabled={!form.libelle || !form.prix || mutation.isPending}
           startIcon={mutation.isPending ? <CircularProgress size={16} color="inherit" /> : <AddCircleOutlineIcon />}
         >
-          {isStockOp ? 'Soumettre pour approbation' : 'Cr�er le produit'}
+          {isStockOp ? 'Soumettre pour approbation' : 'Créer le produit'}
         </Button>
       </Paper>
     </Box>

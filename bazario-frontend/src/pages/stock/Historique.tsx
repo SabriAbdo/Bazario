@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { productApi } from '../../api/productApi';
 import { useAuthStore } from '../../store/useAuthStore';
+import { formatCategoryList } from '../../utils/categoryDisplay';
 import type { Product } from '../../types';
 
 type SortField = 'libelle' | 'prix' | 'createdAt';
@@ -50,7 +51,7 @@ export default function StockHistorique() {
       qc.invalidateQueries({ queryKey: ['products', 'deleted'] });
       qc.invalidateQueries({ queryKey: ['products'] });
       const name = products.find((p) => p.id === id)?.libelle ?? 'Produit';
-      toast.success(`� ${name} � restaur� avec succ�s`);
+      toast.success(`« ${name} » restauré avec succès`);
       setConfirmProduct(null);
     },
     onError: (err: any) => {
@@ -76,17 +77,17 @@ export default function StockHistorique() {
           <HistoryIcon sx={{ fontSize: 22, color: '#fff' }} />
         </Box>
         <Box>
-          <Typography variant="h4" fontWeight={700}>Corbeille � Historique</Typography>
+          <Typography variant="h4" fontWeight={700}>Corbeille — Historique</Typography>
           <Typography variant="body2" color="text.secondary">
-            {total} produit{total !== 1 ? 's' : ''} supprim�{total !== 1 ? 's' : ''}
-            {!isAdmin && ' � restauration r�serv�e aux administrateurs'}
+            {total} produit{total !== 1 ? 's' : ''} supprimé{total !== 1 ? 's' : ''}
+            {!isAdmin && ' — restauration réservée aux administrateurs'}
           </Typography>
         </Box>
       </Box>
 
       {!isAdmin && (
         <Alert severity="info" icon={<LockIcon />} sx={{ mb: 3 }}>
-          La restauration de produits supprim�s n�cessite l'approbation d'un <strong>administrateur</strong>.
+          La restauration de produits supprimés nécessite l'approbation d'un <strong>administrateur</strong>.
           Contactez votre admin pour restaurer un produit.
         </Alert>
       )}
@@ -101,12 +102,12 @@ export default function StockHistorique() {
           <TableHead>
             <TableRow sx={{ bgcolor: '#0D1E36' }}>
               <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5, width: 68 }}>Photo</TableCell>
-              <SortableCell field="libelle" label="Libell�" />
-              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>R�f�rence</TableCell>
+              <SortableCell field="libelle" label="Libellé" />
+              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Référence</TableCell>
               <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Marque</TableCell>
-              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Cat�gorie</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Catégorie</TableCell>
               <SortableCell field="prix" label="Prix (MAD)" />
-              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Cr�� par</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Créé par</TableCell>
               <SortableCell field="createdAt" label="Date d'ajout" />
               <TableCell sx={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>Action</TableCell>
             </TableRow>
@@ -130,13 +131,13 @@ export default function StockHistorique() {
                     {p.libelle}
                   </Box>
                 </TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', fontFamily: 'monospace' }}>{p.reference ?? '�'}</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{p.marque ?? '�'}</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{p.categorie ?? '�'}</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', fontFamily: 'monospace' }}>{p.reference ?? '—'}</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{p.marque ?? '—'}</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{formatCategoryList(p.categories)}</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>
                   {p.prix.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}
                 </TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>{p.createdByName ?? '�'}</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>{p.createdByName ?? '—'}</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
                   {new Date(p.createdAt).toLocaleString('fr-FR')}
                 </TableCell>
@@ -173,7 +174,7 @@ export default function StockHistorique() {
           onPageChange={(_, p) => setPage(p)}
           onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(0); }}
           rowsPerPageOptions={[10, 20, 50]}
-          labelRowsPerPage="Lignes :" labelDisplayedRows={({ from, to, count }) => `${from}�${to} sur ${count}`}
+          labelRowsPerPage="Lignes :" labelDisplayedRows={({ from, to, count }) => `${from}–${to} sur ${count}`}
         />
       </Paper>
 
@@ -183,8 +184,8 @@ export default function StockHistorique() {
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Voulez-vous remettre <strong>� {confirmProduct?.libelle} �</strong> dans le catalogue ?
-            Il sera automatiquement marqu� comme <strong>approuv�</strong>.
+            Voulez-vous remettre <strong>« {confirmProduct?.libelle} »</strong> dans le catalogue ?
+            Il sera automatiquement marqué comme <strong>approuvé</strong>.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

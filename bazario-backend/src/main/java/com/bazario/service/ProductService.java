@@ -1,12 +1,15 @@
 package com.bazario.service;
 
 import com.bazario.dto.ProductDto;
+import com.bazario.entity.Category;
 import com.bazario.entity.Product;
 import com.bazario.entity.ProductVariant;
 import com.bazario.entity.User;
 import com.bazario.exception.ResourceNotFoundException;
+import com.bazario.repository.CategorieRepository;
 import com.bazario.repository.ProductRepository;
 import com.bazario.repository.ProductVariantRepository;
+import com.bazario.repository.OrderItemRepository;
 import com.bazario.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,8 +29,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +47,8 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final ProductVariantRepository variantRepository;
+    private final CategorieRepository categorieRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public Page<ProductDto.Response> getProductsPaged(
             String q, String categorie, String marque,
@@ -65,6 +75,33 @@ public class ProductService {
                 .stream().map(this::toDto).toList();
     }
 
+    /** Best-selling approved products, ranked by total quantity sold; falls back to newest products when no sales exist */
+    public List<ProductDto.Response> getBestSellers(int limit) {
+        List<Long> rankedIds = orderItemRepository.findBestSellingProductIds(
+                com.bazario.entity.Order.OrderStatus.ANNULEE,
+                com.bazario.entity.Order.OrderStatus.REFUSEE,
+                PageRequest.of(0, limit));
+        Map<Long, com.bazario.entity.Product> byId = productRepository.findAllById(rankedIds).stream()
+                .filter(p -> !p.isDeleted() && p.isApprovedByAdmin())
+                .collect(Collectors.toMap(com.bazario.entity.Product::getId, p -> p, (a, b) -> a, LinkedHashMap::new));
+
+        List<ProductDto.Response> result = rankedIds.stream()
+                .map(byId::get)
+                .filter(java.util.Objects::nonNull)
+                .map(this::toDto)
+                .collect(Collectors.toList());
+
+        if (result.size() < limit) {
+            Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+            productRepository.findByDeletedFalse(pageable).getContent().stream()
+                    .filter(com.bazario.entity.Product::isApprovedByAdmin)
+                    .filter(p -> result.stream().noneMatch(r -> r.id().equals(p.getId())))
+                    .limit((long) limit - result.size())
+                    .forEach(p -> result.add(toDto(p)));
+        }
+        return result;
+    }
+
     public Page<ProductDto.Response> searchProducts(String q, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return productRepository.searchProducts(q, pageable).map(this::toDto);
@@ -85,12 +122,16 @@ public class ProductService {
         // Admin-created products are auto-approved; STOCK_OPERATEUR products need admin review
         boolean autoApproved = user.getRole() == com.bazario.entity.User.Role.ADMIN;
 
+        Set<Category> categories = resolveCategories(req.categories());
+
         // Enforce category restrictions for STOCK_OPERATEUR
         if (user.getRole() == User.Role.STOCK_OPERATEUR
                 && user.getAllowedCategories() != null && !user.getAllowedCategories().isBlank()) {
             List<String> allowed = Arrays.asList(user.getAllowedCategories().split(","));
-            if (req.categorie() != null && !allowed.contains(req.categorie().trim())) {
-                throw new AccessDeniedException("Catégorie non autorisée pour cet opérateur");
+            for (Category c : categories) {
+                if (!allowed.contains(c.getSlug())) {
+                    throw new AccessDeniedException("Catégorie non autorisée pour cet opérateur");
+                }
             }
         }
 
@@ -102,7 +143,7 @@ public class ProductService {
                 .prixPromo(req.prixPromo())
                 .reference(req.reference())
                 .marque(req.marque())
-                .categorie(req.categorie())
+                .categories(categories)
                 .unite(req.unite() != null ? req.unite() : com.bazario.entity.Unite.PIECE)
                 .quantiteMin(req.quantiteMin() != null ? req.quantiteMin() : 1)
                 .deleted(false)
@@ -123,11 +164,15 @@ public class ProductService {
         if (user.getRole() != User.Role.ADMIN && !product.getCreatedBy().getId().equals(user.getId())) {
             throw new AccessDeniedException("Vous ne pouvez modifier que vos propres produits");
         }
-        if (req.categorie() != null && user.getRole() == User.Role.STOCK_OPERATEUR
+
+        Set<Category> categories = req.categories() != null ? resolveCategories(req.categories()) : null;
+        if (categories != null && user.getRole() == User.Role.STOCK_OPERATEUR
                 && user.getAllowedCategories() != null && !user.getAllowedCategories().isBlank()) {
             List<String> allowed = Arrays.asList(user.getAllowedCategories().split(","));
-            if (!allowed.contains(req.categorie().trim())) {
-                throw new AccessDeniedException("Catégorie non autorisée pour cet opérateur");
+            for (Category c : categories) {
+                if (!allowed.contains(c.getSlug())) {
+                    throw new AccessDeniedException("Catégorie non autorisée pour cet opérateur");
+                }
             }
         }
 
@@ -138,7 +183,7 @@ public class ProductService {
         if (req.prixPromo() != null) product.setPrixPromo(req.prixPromo());
         if (req.reference() != null) product.setReference(req.reference());
         if (req.marque() != null) product.setMarque(req.marque());
-        if (req.categorie() != null) product.setCategorie(req.categorie());
+        if (categories != null) product.setCategories(categories);
         if (req.unite() != null) product.setUnite(req.unite());
         if (req.quantiteMin() != null) product.setQuantiteMin(req.quantiteMin());
 
@@ -303,14 +348,24 @@ public class ProductService {
                 v.getPrixSupplement(), v.getStock());
     }
 
+    /** Resolves category slugs to persisted Category entities; unknown slugs are silently ignored. */
+    private Set<Category> resolveCategories(List<String> slugs) {
+        if (slugs == null || slugs.isEmpty()) return new LinkedHashSet<>();
+        List<String> distinct = slugs.stream().filter(s -> s != null && !s.isBlank()).map(String::trim).distinct().toList();
+        return new LinkedHashSet<>(categorieRepository.findBySlugIn(distinct));
+    }
+
     private ProductDto.Response toDto(Product p) {
         List<ProductDto.VariantResponse> variants = p.getVariants() != null
                 ? p.getVariants().stream().map(this::toVariantDto).toList()
                 : List.of();
+        List<String> categorySlugs = p.getCategories() != null
+                ? p.getCategories().stream().map(Category::getSlug).toList()
+                : List.of();
         return new ProductDto.Response(
                 p.getId(), p.getLibelle(), p.getDescription(), p.getPrix(),
                 p.isPrixActif(), p.getPrixPromo(),
-                p.getReference(), p.getMarque(), p.getCategorie(),
+                p.getReference(), p.getMarque(), categorySlugs,
                 p.getUnite() != null ? p.getUnite() : com.bazario.entity.Unite.PIECE,
                 p.getQuantiteMin(),
                 p.getCreatedBy() != null ? p.getCreatedBy().getId() : null,

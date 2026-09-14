@@ -30,6 +30,7 @@ public class CommentController {
      * If the caller is authenticated as ADMIN, the comment is flagged accordingly.
      */
     @PostMapping("/api/v1/products/{productId}/comments")
+    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<CommentDto.Response> add(
             @PathVariable Long productId,
             @Valid @RequestBody CommentDto.AddRequest req,
@@ -42,6 +43,7 @@ public class CommentController {
     /** Admin only — delete any comment */
     @DeleteMapping("/api/v1/comments/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         commentService.delete(id);
         return ResponseEntity.noContent().build();

@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import {
-  Container, Typography, Box, Paper, Button, TextField, Dialog,
+  Typography, Box, Paper, Button, TextField, Dialog,
   DialogTitle, DialogContent, DialogActions, IconButton, Tooltip, alpha,
   Grid, Chip,
 } from '@mui/material';
 import AddIcon         from '@mui/icons-material/Add';
 import EditIcon        from '@mui/icons-material/Edit';
+import DeleteIcon      from '@mui/icons-material/Delete';
 import CloseIcon       from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
@@ -204,10 +205,23 @@ function CategoryDialog({
 export default function StockCategories() {
   const [dialogOpen, setDialogOpen]         = useState(false);
   const [editTarget, setEditTarget]         = useState<Category | undefined>(undefined);
+  const [deleteTarget, setDeleteTarget]     = useState<Category | undefined>(undefined);
+  const qc = useQueryClient();
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: () => categoryApi.getAll(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => categoryApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Catégorie supprimée');
+      setDeleteTarget(undefined);
+    },
+    onError: () => toast.error('Erreur lors de la suppression'),
   });
 
   const openCreate = () => { setEditTarget(undefined); setDialogOpen(true); };
@@ -215,7 +229,7 @@ export default function StockCategories() {
   const closeDialog = () => setDialogOpen(false);
 
   return (
-    <Container maxWidth="lg">
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
           <Typography variant="h2" fontWeight={700}>Catégories</Typography>
@@ -249,7 +263,7 @@ export default function StockCategories() {
                     size="small"
                     onClick={() => openEdit(cat)}
                     sx={{
-                      position: 'absolute', top: 6, right: 6,
+                      position: 'absolute', top: 6, right: 34,
                       opacity: 0, transition: 'opacity 0.15s',
                       '.MuiPaper-root:hover &': { opacity: 1 },
                     }}
@@ -258,10 +272,26 @@ export default function StockCategories() {
                   </IconButton>
                 </Tooltip>
 
-                <Box sx={{ width: 52, height: 52, borderRadius: '50%', bgcolor: alpha(color, 0.12), display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                {/* Delete button */}
+                <Tooltip title="Supprimer la catégorie" placement="top">
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => setDeleteTarget(cat)}
+                    sx={{
+                      position: 'absolute', top: 6, right: 6,
+                      opacity: 0, transition: 'opacity 0.15s',
+                      '.MuiPaper-root:hover &': { opacity: 1 },
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+
+                <Box sx={{ width: 88, height: 88, borderRadius: '50%', bgcolor: alpha(color, 0.12), display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
                   {cat.imageUrl
                     ? <Box component="img" src={`${API_BASE}${cat.imageUrl}`} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <Icon sx={{ fontSize: 26, color }} />}
+                    : <Icon sx={{ fontSize: 40, color }} />}
                 </Box>
                 <Typography fontWeight={600} textAlign="center" fontSize="0.78rem" lineHeight={1.3}>
                   {cat.label}
@@ -278,6 +308,25 @@ export default function StockCategories() {
       </Grid>
 
       <CategoryDialog open={dialogOpen} category={editTarget} onClose={closeDialog} />
-    </Container>
+
+      <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(undefined)} maxWidth="xs" fullWidth>
+        <DialogTitle>Supprimer la catégorie</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Voulez-vous supprimer <strong>{deleteTarget?.label}</strong>&nbsp;? Les produits qui lui sont associés ne seront pas supprimés, ils perdront simplement cette catégorie.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteTarget(undefined)} color="inherit">Annuler</Button>
+          <Button
+            variant="contained" color="error"
+            disabled={deleteMutation.isPending}
+            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+          >
+            Supprimer
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }

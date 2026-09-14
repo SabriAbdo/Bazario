@@ -1,5 +1,5 @@
 import {
-  Container, Typography, Box, Paper, Chip, Divider, Alert,
+  Typography, Box, Paper, Chip, Divider, Alert,
   Stepper, Step, StepLabel, StepContent,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -26,6 +26,8 @@ const STATUS_META: Record<CommandStatus, StatusMeta> = {
   VALIDEE:        { label: 'Validée',          color: '#4CAF50', icon: <CheckCircleIcon /> },
   REFUSEE:        { label: 'Refusée',          color: '#F44336', icon: <CancelIcon /> },
   ANNULEE:        { label: 'Annulée',          color: '#F44336', icon: <CancelIcon /> },
+  EN_ROUTE:       { label: 'En route',         color: '#00BCD4', icon: <LocalShippingIcon /> },
+  RETOURNEE:      { label: 'Retournée',        color: '#F44336', icon: <CancelIcon /> },
 };
 
 const TIMELINE_STEPS: CommandStatus[] = ['EN_ATTENTE', 'CONFIRMEE', 'EN_PREPARATION', 'EXPEDIEE', 'LIVREE'];
@@ -52,14 +54,14 @@ export default function OrderDetail() {
 
   const currentStatus: CommandStatus = order.status;
   const meta = STATUS_META[currentStatus] ?? STATUS_META.EN_ATTENTE;
-  const isTerminal = currentStatus === 'REFUSEE' || currentStatus === 'ANNULEE';
+  const isTerminal = currentStatus === 'REFUSEE' || currentStatus === 'ANNULEE' || currentStatus === 'RETOURNEE';
   const activeStep = TIMELINE_STEPS.indexOf(currentStatus);
   const historyByStatus: Partial<Record<CommandStatus, string>> = {};
   (order.history ?? []).forEach((h) => { historyByStatus[h.status] = h.changedAt; });
   const total = order.items.reduce((s, i) => s + i.prixSnapshot * i.quantite, 0);
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Typography variant="h5" fontWeight={700} gutterBottom>Commande #{order.id}</Typography>
 
       {/* Status banner */}
@@ -171,6 +173,6 @@ export default function OrderDetail() {
       )}
 
 
-    </Container>
+    </Box>
   );
 }

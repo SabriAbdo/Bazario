@@ -84,7 +84,7 @@ export default function AdminDashboard() {
           </Box>
           <Box>
             <Typography variant="h4">Tableau de bord</Typography>
-            <Typography variant="body2" color="text.secondary">Vue d'ensemble de l'activit�</Typography>
+            <Typography variant="body2" color="text.secondary">Vue d'ensemble de l'activité</Typography>
           </Box>
         </Box>
         {stats.pendingApprovalProducts > 0 && (
@@ -130,10 +130,10 @@ export default function AdminDashboard() {
             onClick={() => navigate('/admin/commandes')} />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label="Commandes valid�es" value={stats.commandsValidees} icon={<CheckCircleIcon />} color="#2E7D32" />
+          <StatCard label="Commandes validées" value={stats.commandsValidees} icon={<CheckCircleIcon />} color="#2E7D32" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label="Commandes refus�es" value={stats.commandsRefusees} icon={<CancelIcon />} color="#C62828" />
+          <StatCard label="Commandes refusées" value={stats.commandsRefusees} icon={<CancelIcon />} color="#C62828" />
         </Grid>
       </Grid>
     </Box>

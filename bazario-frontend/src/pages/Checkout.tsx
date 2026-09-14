@@ -7,6 +7,7 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp';;
 import PersonIcon from '@mui/icons-material/Person';
 import PhoneIcon from '@mui/icons-material/Phone';
 import EmailIcon from '@mui/icons-material/Email';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { orderApi } from '../api/orderApi';
@@ -16,7 +17,7 @@ export default function Checkout() {
   const { items, clearCart, totalPrice } = useCartStore();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ nom: '', prenom: '', telephone: '', email: '' });
+  const [form, setForm] = useState({ nom: '', prenom: '', adresse: '', telephone: '', email: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (items.length === 0) {
@@ -31,6 +32,7 @@ export default function Checkout() {
     const e: Record<string, string> = {};
     if (!form.nom.trim()) e.nom = 'Nom requis';
     if (!form.prenom.trim()) e.prenom = 'Prénom requis';
+    if (!form.adresse.trim()) e.adresse = 'Adresse de livraison requise';
     if (!form.telephone.trim()) e.telephone = 'Téléphone requis';
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = 'Email invalide';
     setErrors(e);
@@ -77,9 +79,16 @@ export default function Checkout() {
             <TextField label="Prénom" fullWidth value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })}
               error={!!errors.prenom} helperText={errors.prenom} />
           </Box>
+          <TextField label="Adresse de livraison" fullWidth
+            value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })}
+            error={!!errors.adresse} helperText={errors.adresse} placeholder="Rue, ville, code postal..."
+            multiline rows={2} sx={{ mt: 2 }}
+            InputProps={{ startAdornment: <LocationOnIcon sx={{ color: 'text.secondary', fontSize: 18, mr: 1, alignSelf: 'flex-start', mt: 0.5 }} /> }}
+          />
           <TextField label="Numéro de téléphone" fullWidth
             value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })}
             error={!!errors.telephone} helperText={errors.telephone} placeholder="06XXXXXXXX"
+            sx={{ mt: 2 }}
             InputProps={{ startAdornment: <PhoneIcon sx={{ color: 'text.secondary', fontSize: 18, mr: 1 }} /> }}
           />
           <TextField label="Email (optionnel)" fullWidth
@@ -107,17 +116,21 @@ export default function Checkout() {
         <Paper sx={{ width: { xs: '100%', lg: 300 }, flexShrink: 0, p: 3, borderRadius: 3, position: { lg: 'sticky' }, top: 80, border: '2px solid', borderColor: 'primary.light' }}>
           <Typography variant="h6" fontWeight={700} mb={2}>Récapitulatif</Typography>
           <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
-            {items.map((e) => (
-              <Box key={e.product.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Box>
-                  <Typography variant="body2" fontWeight={600} sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {e.product.libelle}
-                  </Typography>
-                  <Chip label={`×${e.quantite}`} size="small" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
+            {items.map((e) => {
+              const hasPromo = e.product.prixActif && e.product.prixPromo != null && e.product.prixPromo > 0 && e.product.prixPromo < e.product.prix;
+              const unitPrice = hasPromo ? e.product.prixPromo! : e.product.prix;
+              return (
+                <Box key={e.product.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Box>
+                    <Typography variant="body2" fontWeight={600} sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {e.product.libelle}
+                    </Typography>
+                    <Chip label={`×${e.quantite}`} size="small" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
+                  </Box>
+                  <Typography variant="body2" fontWeight={700} color="primary.main">{fmt(unitPrice * e.quantite)}</Typography>
                 </Box>
-                <Typography variant="body2" fontWeight={700} color="primary.main">{fmt(e.product.prix * e.quantite)}</Typography>
-              </Box>
-            ))}
+              );
+            })}
           </Box>
           <Divider sx={{ my: 2 }} />
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>

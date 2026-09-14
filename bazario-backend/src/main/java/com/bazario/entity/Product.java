@@ -7,7 +7,9 @@ import jakarta.persistence.CascadeType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "products")
@@ -40,8 +42,12 @@ public class Product {
     @Column(length = 100)
     private String marque;
 
-    @Column(length = 50)
-    private String categorie;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "product_category_link",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id"))
+    @Builder.Default
+    private Set<Category> categories = new LinkedHashSet<>();
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)

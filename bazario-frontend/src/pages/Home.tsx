@@ -1,7 +1,7 @@
-﻿import { useState, useRef } from 'react';
+﻿import { useState } from 'react';
 import {
   Box, Container, Typography, Button, Grid, Paper,
-  Chip, Skeleton, InputBase, alpha, IconButton,
+  Chip, Skeleton, InputBase, alpha,
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -9,18 +9,16 @@ import { motion } from 'framer-motion';
 import { Search } from '@mui/icons-material';
 import { productApi } from '@/api/productApi';
 import { categoryApi } from '@/api/miscApi';
-import ProductGrid from '@/components/product/ProductGrid';
+import ProductCarousel from '@/components/product/ProductCarousel';
 import type { Category, PagedResponse, Product } from '@/types';
 import {
   ElectricBolt, Computer, PhoneAndroid, Checkroom, Man, ChildCare,
   HomeOutlined, Kitchen, FitnessCenter, Spa, ShoppingBasket,
   LibraryBooks, SmartToy, DirectionsCar, LocalFlorist, Pets,
-  Handyman, Luggage, WorkOutline, Category as CategoryIcon, GridView,
+  Handyman, Luggage, WorkOutline, Category as CategoryIcon,
   ElectricalServices, Cable, Power, Dashboard, Lightbulb, ElectricMeter,
   SettingsInputComponent, WbSunny, Router, Shield,
-  ChevronLeft, ChevronRight,
 } from '@mui/icons-material';
-import ProductCard from '@/components/product/ProductCard';
 import { ICON_REGISTRY } from '@/utils/iconRegistry';
 import { useTranslation } from 'react-i18next';
 
@@ -80,18 +78,15 @@ export default function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchQ, setSearchQ] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const scrollCarousel = (dir: 'left' | 'right') =>
-    scrollRef.current?.scrollBy({ left: dir === 'right' ? 280 : -280, behavior: 'smooth' });
 
-  const { data: featured, isLoading } = useQuery<PagedResponse<Product>>({
-    queryKey: ['products', 'home-featured'],
-    queryFn: () => productApi.getAll({ page: 0, size: 8 }),
+  const { data: bestSellers, isLoading: loadingBestSellers } = useQuery<Product[]>({
+    queryKey: ['products', 'home-best-sellers'],
+    queryFn: () => productApi.getBestSellers(12),
   });
 
   const { data: latest, isLoading: loadingLatest } = useQuery<PagedResponse<Product>>({
     queryKey: ['products', 'home-latest'],
-    queryFn: () => productApi.getAll({ page: 0, size: 8, sort: 'createdAt', sortDir: 'desc' }),
+    queryFn: () => productApi.getAll({ page: 0, size: 12, sort: 'createdAt', sortDir: 'desc' }),
   });
 
   const { data: categories } = useQuery<Category[]>({
@@ -168,7 +163,7 @@ export default function Home() {
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ py:6 }}>
+      <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
 
         {/* Trust badges */}
         <Box sx={{ display:'flex', gap:1.5, flexWrap:'wrap', mb:7, justifyContent:'center' }}>
@@ -227,33 +222,31 @@ export default function Home() {
           )}
         </Box>
 
-        {/* Featured products */}
+        {/* Best sellers — stylish sliding carousel */}
         <Box sx={{ mb:8 }}>
           <Box sx={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', mb:3 }}>
             <Box>
-              <Typography variant="h2" sx={{ fontWeight:700 }}>{t('home.featured_title')}</Typography>
-              <Typography color="text.secondary" sx={{ fontSize:'0.9rem' }}>{t('home.featured_subtitle')}</Typography>
+              <Typography variant="h2" sx={{ fontWeight:700 }}>{t('home.best_sellers_title')}</Typography>
+              <Typography color="text.secondary" sx={{ fontSize:'0.9rem' }}>{t('home.best_sellers_subtitle')}</Typography>
             </Box>
             <Button component={Link} to="/products" variant="outlined" sx={{ fontWeight:600 }}>
               {t('home.see_all')}
             </Button>
           </Box>
-          {isLoading ? (
+          {loadingBestSellers ? (
             <Grid container spacing={2}>
-              {Array.from({ length:8 }).map((_,i) => (
+              {Array.from({ length:4 }).map((_,i) => (
                 <Grid item xs={12} sm={6} md={3} key={i}>
                   <Skeleton variant="rounded" height={280} sx={{ borderRadius:2 }} />
                 </Grid>
               ))}
             </Grid>
           ) : (
-            <ProductGrid products={featured?.content ?? []} />
+            <ProductCarousel products={bestSellers ?? []} />
           )}
         </Box>
 
-
-
-        {/* New arrivals — horizontal scroll carousel */}
+        {/* New arrivals — stylish sliding carousel */}
         <Box>
           <Box sx={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', mb:3 }}>
             <Box>
@@ -264,59 +257,20 @@ export default function Home() {
               {t('home.see_all')}
             </Button>
           </Box>
-
-          <Box sx={{ position:'relative' }}>
-            {/* Left arrow */}
-            <IconButton
-              onClick={() => scrollCarousel('left')}
-              size="small"
-              sx={{
-                position:'absolute', left:-16, top:'50%', transform:'translateY(-50%)', zIndex:2,
-                bgcolor:'background.paper', boxShadow:3, border:'1px solid', borderColor:'divider',
-                '&:hover':{ bgcolor:'grey.100' },
-              }}
-            >
-              <ChevronLeft />
-            </IconButton>
-
-            {/* Scroll track */}
-            <Box
-              ref={scrollRef}
-              sx={{
-                display:'flex', gap:2, overflowX:'auto', pb:1,
-                scrollbarWidth:'none', '&::-webkit-scrollbar':{ display:'none' },
-              }}
-            >
-              {loadingLatest
-                ? Array.from({ length:5 }).map((_,i) => (
-                    <Box key={i} sx={{ minWidth:240, flexShrink:0 }}>
-                      <Skeleton variant="rounded" height={300} sx={{ borderRadius:2 }} />
-                    </Box>
-                  ))
-                : (latest?.content ?? []).map((product) => (
-                    <Box key={product.id} sx={{ minWidth:240, flexShrink:0 }}>
-                      <ProductCard product={product} />
-                    </Box>
-                  ))
-              }
-            </Box>
-
-            {/* Right arrow */}
-            <IconButton
-              onClick={() => scrollCarousel('right')}
-              size="small"
-              sx={{
-                position:'absolute', right:-16, top:'50%', transform:'translateY(-50%)', zIndex:2,
-                bgcolor:'background.paper', boxShadow:3, border:'1px solid', borderColor:'divider',
-                '&:hover':{ bgcolor:'grey.100' },
-              }}
-            >
-              <ChevronRight />
-            </IconButton>
-          </Box>
+          {loadingLatest ? (
+            <Grid container spacing={2}>
+              {Array.from({ length:4 }).map((_,i) => (
+                <Grid item xs={12} sm={6} md={3} key={i}>
+                  <Skeleton variant="rounded" height={280} sx={{ borderRadius:2 }} />
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <ProductCarousel products={latest?.content ?? []} autoPlayMs={6000} />
+          )}
         </Box>
 
-      </Container>
+      </Box>
     </Box>
   );
 }

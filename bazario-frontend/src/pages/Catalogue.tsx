@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from 'react';
+﻿import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Box, TextField, InputAdornment, Grid, Card, CardContent, CardActions,
   Typography, Button, Chip, Skeleton, Alert, alpha,
@@ -28,29 +28,30 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import ProductDetailDialog, { CATEGORIES, CATEGORIE_MAP, UNITE_LABEL, getCategory } from '../components/ProductDetailDialog';
-import type { CatKey } from '../components/ProductDetailDialog';
+import ProductDetailDialog, { UNITE_LABEL } from '../components/ProductDetailDialog';
+import { buildCategoryDisplays, findCategoryDisplay, findCategoryDisplays, ALL_CATEGORY } from '../utils/categoryDisplay';
+import type { CategoryDisplay } from '../utils/categoryDisplay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { productApi } from '../api/productApi';
+import { categoryApi } from '../api/miscApi';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/useAuthStore';
 import toast from 'react-hot-toast';
-import type { Product } from '../types';
+import type { Category, Product } from '../types';
 import { useTranslation } from 'react-i18next';
 
 const PAGE_SIZE = 24;
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-function ProductCard({ product, added, onAdd, onDetails, isStockOrAdmin, onEdit, onDelete }: {
-  product: Product; added: boolean; onAdd: () => void; onDetails: () => void;
+function ProductCard({ product, categoryDisplays, added, onAdd, onDetails, isStockOrAdmin, onEdit, onDelete }: {
+  product: Product; categoryDisplays: CategoryDisplay[]; added: boolean; onAdd: () => void; onDetails: () => void;
   isStockOrAdmin?: boolean; onEdit?: () => void; onDelete?: () => void;
 }) {
-  const catKey = product.categorie
-    ? (CATEGORIE_MAP[product.categorie] ?? 'all')
-    : getCategory(product.libelle);
-  const cat = CATEGORIES.find((c) => c.key === catKey) ?? CATEGORIES[0];
+  const productCats = findCategoryDisplays(categoryDisplays, product.categories);
+  const cat = productCats[0];
+  const catLabel = productCats.length > 1 ? `${cat.label} +${productCats.length - 1}` : cat.label;
   const uniteLabel = UNITE_LABEL[product.unite ?? 'PIECE'] ?? 'pce';
   const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixPromo < product.prix;
   const [confirming, setConfirming] = useState(false);
@@ -65,7 +66,7 @@ function ProductCard({ product, added, onAdd, onDetails, isStockOrAdmin, onEdit,
             alt={product.libelle}
             sx={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.04)' } }}
           />
-          <Chip label={cat.label} size="small"
+          <Chip label={catLabel} size="small"
             sx={{ position: 'absolute', top: 8, left: 8, bgcolor: alpha(cat.color, 0.9), color: '#fff', fontWeight: 700, fontSize: '0.62rem', height: 20 }} />
         </Box>
       ) : (
@@ -83,7 +84,7 @@ function ProductCard({ product, added, onAdd, onDetails, isStockOrAdmin, onEdit,
             </Box>
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
               <Chip
-                label={cat.label}
+                label={catLabel}
                 size="small"
                 sx={{ bgcolor: alpha(cat.color, 0.12), color: cat.color, fontWeight: 700, fontSize: '0.65rem', height: 20 }}
               />
@@ -212,7 +213,7 @@ export default function Catalogue() {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState<CatKey>(() => (searchParams.get('cat') as CatKey) ?? 'all');
+  const [activeCategory, setActiveCategory] = useState<string>(() => searchParams.get('cat') ?? 'all');
   const [justAdded, setJustAdded] = useState<Set<number>>(new Set());
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -228,6 +229,15 @@ export default function Catalogue() {
   const isStockOrAdmin = user?.role === 'STOCK_OPERATEUR' || user?.role === 'ADMIN';
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: () => categoryApi.getAll(),
+  });
+  const categoryDisplays = useMemo(() => [ALL_CATEGORY, ...buildCategoryDisplays(categories)], [categories]);
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const scrollCategories = (dir: 'left' | 'right') =>
+    categoryScrollRef.current?.scrollBy({ left: dir === 'right' ? 240 : -240, behavior: 'smooth' });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => productApi.delete(id),
@@ -306,12 +316,10 @@ export default function Catalogue() {
 
   const allLoaded = (data?.content ?? []).filter((p) => p.prixActif);
 
-  const categoryCount = (key: CatKey) => {
+  const categoryCount = (key: string) => {
     if (key === 'all') return totalElements;
-    return allLoaded.filter((p) => {
-      const k = p.categorie ? (CATEGORIE_MAP[p.categorie] ?? 'all') : getCategory(p.libelle);
-      return k === key;
-    }).length;
+    if (key === 'none') return allLoaded.filter((p) => !p.categories || p.categories.length === 0).length;
+    return allLoaded.filter((p) => p.categories?.includes(key)).length;
   };
 
   const availableMarques = useMemo(() =>
@@ -391,7 +399,7 @@ export default function Catalogue() {
           <Box sx={{ display: 'flex', gap: 3, mt: 3, flexWrap: 'wrap' }}>
             {[
               { label: 'Produits', value: totalElements || '…' },
-              { label: 'Catégories', value: 20 },
+              { label: 'Catégories', value: categories.length },
               { label: 'Livraison', value: 'Rapide' },
             ].map((s) => (
               <Box key={s.label} sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -405,29 +413,46 @@ export default function Catalogue() {
 
       {/* ── Category Filter ──────────────────────────────────────────────────── */}
       <Box sx={{ bgcolor: '#fff', borderBottom: '1px solid', borderColor: 'divider', px: { xs: 2, md: 4 }, py: 1.5 }}>
-        <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.5, '&::-webkit-scrollbar': { height: 3 } }}>
-          {CATEGORIES.map((cat) => {
-            const count = categoryCount(cat.key);
-            const active = activeCategory === cat.key;
-            return (
-              <Chip
-                key={cat.key}
-                icon={<Box sx={{ color: active ? '#fff' : cat.color, display: 'flex', '& svg': { fontSize: 16 } }}>{cat.icon}</Box>}
-                label={`${cat.label}${count > 0 ? ` (${count})` : ''}`}
-                onClick={() => setActiveCategory(cat.key)}
-                sx={{
-                  borderRadius: 6, fontWeight: active ? 700 : 500,
-                  fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer',
-                  bgcolor: active ? cat.color : alpha(cat.color, 0.08),
-                  color: active ? '#fff' : cat.color,
-                  border: `1px solid ${active ? cat.color : alpha(cat.color, 0.3)}`,
-                  '& .MuiChip-label': { pl: 0.5 },
-                  '&:hover': { bgcolor: active ? cat.color : alpha(cat.color, 0.16) },
-                  flexShrink: 0,
-                }}
-              />
-            );
-          })}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <IconButton
+            size="small" onClick={() => scrollCategories('left')}
+            sx={{ flexShrink: 0, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}
+          >
+            <ChevronLeftIcon fontSize="small" />
+          </IconButton>
+          <Box
+            ref={categoryScrollRef}
+            sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.5, scrollBehavior: 'smooth', '&::-webkit-scrollbar': { height: 3 } }}
+          >
+            {categoryDisplays.map((cat) => {
+              const count = categoryCount(cat.key);
+              const active = activeCategory === cat.key;
+              return (
+                <Chip
+                  key={cat.key}
+                  icon={<Box sx={{ color: active ? '#fff' : cat.color, display: 'flex', '& svg': { fontSize: 16 } }}>{cat.icon}</Box>}
+                  label={`${cat.label}${count > 0 ? ` (${count})` : ''}`}
+                  onClick={() => setActiveCategory(cat.key)}
+                  sx={{
+                    borderRadius: 6, fontWeight: active ? 700 : 500,
+                    fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer',
+                    bgcolor: active ? cat.color : alpha(cat.color, 0.08),
+                    color: active ? '#fff' : cat.color,
+                    border: `1px solid ${active ? cat.color : alpha(cat.color, 0.3)}`,
+                    '& .MuiChip-label': { pl: 0.5 },
+                    '&:hover': { bgcolor: active ? cat.color : alpha(cat.color, 0.16) },
+                    flexShrink: 0,
+                  }}
+                />
+              );
+            })}
+          </Box>
+          <IconButton
+            size="small" onClick={() => scrollCategories('right')}
+            sx={{ flexShrink: 0, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}
+          >
+            <ChevronRightIcon fontSize="small" />
+          </IconButton>
         </Box>
       </Box>
 
@@ -570,7 +595,7 @@ export default function Catalogue() {
           <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" color="text.secondary">
               <strong>{visible.length}</strong> produit{visible.length > 1 ? 's' : ''} trouvé{visible.length > 1 ? 's' : ''}
-              {activeCategory !== 'all' && ` dans "${CATEGORIES.find((c) => c.key === activeCategory)?.label}"`}
+              {activeCategory !== 'all' && ` dans "${findCategoryDisplay(categoryDisplays, activeCategory).label}"`}
             </Typography>
           </Box>
         )}
@@ -605,6 +630,7 @@ export default function Catalogue() {
                 >
                   <ProductCard
                     product={product}
+                    categoryDisplays={categoryDisplays}
                     added={justAdded.has(product.id)}
                     onAdd={() => handleAdd(product)}
                     onDetails={() => setSelectedProduct(product)}

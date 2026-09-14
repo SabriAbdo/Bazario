@@ -34,7 +34,12 @@ export const useCartStore = create<CartState>()(
       },
       clearCart: () => set({ items: [] }),
       totalItems: () => get().items.reduce((s, e) => s + e.quantite, 0),
-      totalPrice: () => get().items.reduce((s, e) => s + e.product.prix * e.quantite, 0),
+      totalPrice: () => get().items.reduce((s, e) => {
+        const { product } = e;
+        const hasPromo = product.prixActif && product.prixPromo != null && product.prixPromo > 0 && product.prixPromo < product.prix;
+        const unitPrice = hasPromo ? product.prixPromo! : product.prix;
+        return s + unitPrice * e.quantite;
+      }, 0),
     }),
     { name: 'bazario-cart' }
   )

@@ -20,6 +20,8 @@ const STATUS_CHIP: Record<CommandStatus, { label: string; color: 'warning' | 'su
   VALIDEE:        { label: '✓ Validée',        color: 'success' },
   REFUSEE:        { label: '✗ Refusée',        color: 'error' },
   ANNULEE:        { label: 'Annulée',          color: 'error' },
+  EN_ROUTE:       { label: 'En route',         color: 'info' },
+  RETOURNEE:      { label: 'Retournée',        color: 'error' },
 };
 
 type SortField = 'updatedAt' | 'createdAt' | 'nom' | 'status';

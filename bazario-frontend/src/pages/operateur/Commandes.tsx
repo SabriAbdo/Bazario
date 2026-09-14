@@ -26,11 +26,14 @@ const STATUS_CHIP: Record<CommandStatus, { label: string; color: 'warning' | 'su
   VALIDEE:        { label: '✓ VALIDÉE',        color: 'success' },
   REFUSEE:        { label: '✗ Refusée',        color: 'error' },
   ANNULEE:        { label: 'Annulée',          color: 'error' },
+  EN_ROUTE:       { label: 'En route',         color: 'info' },
+  RETOURNEE:      { label: 'Retournée',        color: 'error' },
 };
 
 export default function OperateurCommandes() {
   const qc = useQueryClient();
   const [selectedOrder, setSelectedOrder] = useState<Command | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ order: Command; status: CommandStatus; label: string } | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [sortField, setSortField] = useState('createdAt');
@@ -45,7 +48,7 @@ export default function OperateurCommandes() {
 
   const { data: result, isLoading, isError } = useQuery({
     queryKey: ['commands', page, rowsPerPage, sortField, sortDir, search],
-    queryFn: () => orderApi.getAll({ page, size: rowsPerPage, sort: sortField, sortDir, q: search || undefined }),
+    queryFn: () => orderApi.getAll({ status: 'EN_ATTENTE', page, size: rowsPerPage, sort: sortField, sortDir, q: search || undefined }),
     refetchInterval: 30_000,
     staleTime: 0,
   });
@@ -56,6 +59,13 @@ export default function OperateurCommandes() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['commands'] }); toast.success('Statut mis à jour'); },
     onError: () => toast.error('Erreur lors de la mise à jour'),
   });
+
+  const confirmPendingAction = () => {
+    if (!pendingAction) return;
+    mutation.mutate({ id: pendingAction.order.id, status: pendingAction.status });
+    setPendingAction(null);
+    setSelectedOrder(null);
+  };
 
   const display = result?.content ?? [];
   const total = result?.totalElements ?? 0;
@@ -170,12 +180,12 @@ export default function OperateurCommandes() {
                     {order.status === 'EN_ATTENTE' && (
                       <>
                         <Tooltip title="Valider">
-                          <Button color="primary" onClick={() => mutation.mutate({ id: order.id, status: 'VALIDEE' })}>
+                          <Button color="primary" onClick={() => setPendingAction({ order, status: 'VALIDEE', label: 'Valider' })}>
                             <CheckIcon sx={{ fontSize: 16 }} />
                           </Button>
                         </Tooltip>
                         <Tooltip title="Refuser">
-                          <Button color="error" onClick={() => mutation.mutate({ id: order.id, status: 'REFUSEE' })}>
+                          <Button color="error" onClick={() => setPendingAction({ order, status: 'REFUSEE', label: 'Refuser' })}>
                             <CloseIcon sx={{ fontSize: 16 }} />
                           </Button>
                         </Tooltip>
@@ -224,6 +234,7 @@ export default function OperateurCommandes() {
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, mb: 2 }}>
                 <Box><Typography variant="caption" color="text.secondary">Nom</Typography><Typography fontWeight={600}>{selectedOrder.prenom} {selectedOrder.nom}</Typography></Box>
                 <Box><Typography variant="caption" color="text.secondary">Téléphone</Typography><Typography fontFamily="monospace">{selectedOrder.telephone}</Typography></Box>
+                {selectedOrder.adresse && <Box sx={{ gridColumn: '1 / -1' }}><Typography variant="caption" color="text.secondary">Adresse de livraison</Typography><Typography>{selectedOrder.adresse}</Typography></Box>}
                 {selectedOrder.email && <Box sx={{ gridColumn: '1 / -1' }}><Typography variant="caption" color="text.secondary">Email</Typography><Typography>{selectedOrder.email}</Typography></Box>}
                 <Box><Typography variant="caption" color="text.secondary">Date</Typography><Typography>{new Date(selectedOrder.createdAt).toLocaleString('fr-FR')}</Typography></Box>
                 {selectedOrder.treatedBy && <Box><Typography variant="caption" color="text.secondary">Traité par</Typography><Typography>{selectedOrder.treatedBy}</Typography></Box>}
@@ -275,16 +286,38 @@ export default function OperateurCommandes() {
               {selectedOrder.status === 'EN_ATTENTE' && (
                 <>
                   <Button variant="contained" color="primary" startIcon={<CheckIcon />}
-                    onClick={() => { mutation.mutate({ id: selectedOrder.id, status: 'VALIDEE' }); setSelectedOrder(null); }}>
+                    onClick={() => setPendingAction({ order: selectedOrder, status: 'VALIDEE', label: 'Valider' })}>
                     Valider
                   </Button>
                   <Button variant="outlined" color="error" startIcon={<CloseIcon />}
-                    onClick={() => { mutation.mutate({ id: selectedOrder.id, status: 'REFUSEE' }); setSelectedOrder(null); }}>
+                    onClick={() => setPendingAction({ order: selectedOrder, status: 'REFUSEE', label: 'Refuser' })}>
                     Refuser
                   </Button>
                 </>
               )}
               <Button onClick={() => setSelectedOrder(null)}>Fermer</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      {/* Status change confirmation */}
+      <Dialog open={!!pendingAction} onClose={() => setPendingAction(null)} maxWidth="xs" fullWidth>
+        {pendingAction && (
+          <>
+            <DialogTitle>Confirmer le changement de statut</DialogTitle>
+            <DialogContent>
+              <Typography>
+                Passer la commande <strong>#{pendingAction.order.id}</strong> ({pendingAction.order.prenom} {pendingAction.order.nom}) de{' '}
+                <Chip {...STATUS_CHIP[pendingAction.order.status]} size="small" sx={{ mx: 0.5 }} /> à{' '}
+                <Chip {...STATUS_CHIP[pendingAction.status]} size="small" sx={{ mx: 0.5 }} /> ?
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setPendingAction(null)}>Annuler</Button>
+              <Button variant="contained" onClick={confirmPendingAction} disabled={mutation.isPending}>
+                Confirmer
+              </Button>
             </DialogActions>
           </>
         )}

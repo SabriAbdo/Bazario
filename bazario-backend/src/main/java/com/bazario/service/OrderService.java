@@ -49,6 +49,7 @@ public class OrderService {
         Order order = Order.builder()
                 .nom(req.nom())
                 .prenom(req.prenom())
+                .adresse(req.adresse())
                 .telephone(req.telephone())
                 .email(req.email())
                 .status(Order.OrderStatus.EN_ATTENTE)
@@ -59,11 +60,19 @@ public class OrderService {
                     .filter(p -> !p.isDeleted())
                     .orElseThrow(() -> new BadRequestException("Produit introuvable: " + itemReq.productId()));
 
+            // Use the promo price when it is active and lower than the regular price
+            java.math.BigDecimal effectivePrice = product.getPrix();
+            if (product.getPrixPromo() != null
+                    && product.getPrixPromo().signum() > 0
+                    && product.getPrixPromo().compareTo(product.getPrix()) < 0) {
+                effectivePrice = product.getPrixPromo();
+            }
+
             OrderItem item = OrderItem.builder()
                     .order(order)
                     .productId(product.getId())
                     .libelleSnapshot(product.getLibelle())
-                    .prixSnapshot(product.getPrix())
+                    .prixSnapshot(effectivePrice)
                     .quantite(itemReq.quantite())
                     .build();
             order.getItems().add(item);
@@ -107,6 +116,35 @@ public class OrderService {
             return orderRepository.searchHistorique(q, Order.OrderStatus.EN_ATTENTE, pageable).map(this::toDto);
         }
         return orderRepository.findByStatusNot(Order.OrderStatus.EN_ATTENTE, pageable).map(this::toDto);
+    }
+
+    /** Statuses reachable once a commande has been accepted and is under delivery tracking. */
+    private static final List<Order.OrderStatus> TRACKED_STATUSES = List.of(
+            Order.OrderStatus.VALIDEE, Order.OrderStatus.EXPEDIEE, Order.OrderStatus.EN_ROUTE,
+            Order.OrderStatus.LIVREE, Order.OrderStatus.RETOURNEE, Order.OrderStatus.ANNULEE);
+
+    public Page<OrderDto.Response> getSuiviPaged(Order.OrderStatus status, String q, int page, int size, String sortField, String sortDir) {
+        Sort.Direction dir = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String field = switch (sortField) {
+            case "nom", "client" -> "nom";
+            case "telephone" -> "telephone";
+            case "status" -> "status";
+            case "createdAt" -> "createdAt";
+            default -> "updatedAt";
+        };
+        Pageable pageable = PageRequest.of(page, size, Sort.by(dir, field));
+        boolean hasQuery = q != null && !q.isBlank();
+        if (status != null) {
+            if (!TRACKED_STATUSES.contains(status)) {
+                throw new BadRequestException("Statut de suivi invalide: " + status);
+            }
+            return (hasQuery
+                    ? orderRepository.searchByStatus(q, status, pageable)
+                    : orderRepository.findByStatus(status, pageable)).map(this::toDto);
+        }
+        return (hasQuery
+                ? orderRepository.searchByStatuses(q, TRACKED_STATUSES, pageable)
+                : orderRepository.findByStatusIn(TRACKED_STATUSES, pageable)).map(this::toDto);
     }
 
     public List<OrderDto.Response> getAllOrders() {

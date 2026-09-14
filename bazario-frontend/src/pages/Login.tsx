@@ -2,7 +2,6 @@
 import {
   Box, Paper, TextField, Button, Typography, CircularProgress, Alert, alpha, InputAdornment, IconButton,
 } from '@mui/material';
-import BoltIcon from '@mui/icons-material/Bolt';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -12,6 +11,7 @@ import { authApi } from '../api/authApi';
 import { useAuthStore } from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import bazarioLogo from '../assets/bazario-logo.png';
 
 const ROLE_HOME: Record<string, string> = {
   ADMIN: '/admin',
@@ -55,13 +55,12 @@ export default function Login() {
       <Box sx={{ width: '100%', maxWidth: 440 }}>
         {/* Logo */}
         <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <Box sx={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            bgcolor: '#009530', borderRadius: 3, p: 1.5, mb: 2,
-            boxShadow: '0 8px 24px rgba(0,149,48,0.35)',
-          }}>
-            <BoltIcon sx={{ fontSize: 36, color: '#fff' }} />
-          </Box>
+          <Box
+            component="img"
+            src={bazarioLogo}
+            alt="Bazario"
+            sx={{ width: 96, height: 96, objectFit: 'contain', mb: 1 }}
+          />
           <Typography variant="h4" sx={{ color: 'text.primary', mb: 0.5 }}>{t('auth.login_title')}</Typography>
           <Typography variant="body2" color="text.secondary">{t('auth.login_subtitle')}</Typography>
         </Box>

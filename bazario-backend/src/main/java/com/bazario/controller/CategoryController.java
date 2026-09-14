@@ -25,6 +25,7 @@ public class CategoryController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('STOCK_OPERATEUR')")
+    @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     public ResponseEntity<CategoryDto.Response> create(@Valid @RequestBody CategoryDto.CreateRequest req) {
         return ResponseEntity.status(201).body(service.create(req));
     }
@@ -42,5 +43,13 @@ public class CategoryController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(service.uploadImage(id, file));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STOCK_OPERATEUR')")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

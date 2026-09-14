@@ -2,6 +2,7 @@ package com.bazario.dto;
 
 import com.bazario.entity.User;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -13,7 +14,7 @@ public class AdminDto {
             @NotBlank @Size(max = 100) String username,
             @NotBlank @Size(min = 6, max = 100) String password,
             @NotBlank String fullName,
-            User.Role role
+            @NotNull User.Role role
     ) {}
 
     public record UpdateUserRequest(

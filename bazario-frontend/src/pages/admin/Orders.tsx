@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Container, Typography, Paper, Chip, Table, TableHead, TableBody, TableRow, TableCell,
+  Box, Typography, Paper, Chip, Table, TableHead, TableBody, TableRow, TableCell,
   LinearProgress, alpha, TablePagination, TableSortLabel, TextField, InputAdornment, ButtonGroup, Button, Tooltip,
 } from '@mui/material';
 import { Search } from '@mui/icons-material';
@@ -21,6 +21,8 @@ const STATUS_CHIP: Record<CommandStatus, { label: string; color: 'warning' | 'su
   VALIDEE:        { label: 'Validée',          color: 'success' },
   REFUSEE:        { label: 'Refusée',          color: 'error' },
   ANNULEE:        { label: 'Annulée',          color: 'error' },
+  EN_ROUTE:       { label: 'En route',         color: 'info' },
+  RETOURNEE:      { label: 'Retournée',        color: 'error' },
 };
 
 export default function AdminOrders() {
@@ -62,7 +64,7 @@ export default function AdminOrders() {
   );
 
   return (
-    <Container maxWidth="xl">
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Typography variant="h2" gutterBottom>Toutes les commandes</Typography>
       <TextField
         size="small" placeholder="Rechercher..." value={search}
@@ -145,6 +147,6 @@ export default function AdminOrders() {
           labelDisplayedRows={({ from, to, count }) => `${from}–${to} sur ${count}`}
         />
       </Paper>
-    </Container>
+    </Box>
   );
 }

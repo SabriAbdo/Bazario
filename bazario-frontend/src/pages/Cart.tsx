@@ -1,4 +1,4 @@
-﻿import { Container, Typography, Box, IconButton, Button, Divider, Paper } from '@mui/material';
+﻿import { Typography, Box, IconButton, Button, Divider, Paper } from '@mui/material';
 import { Delete, Add, Remove, ShoppingCart } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -15,17 +15,17 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+      <Box sx={{ px: { xs: 2, md: 4 }, py: 8, textAlign: 'center' }}>
         <ShoppingCart sx={{ fontSize: 72, color: 'text.disabled', mb: 2 }} />
         <Typography variant="h5" fontWeight={700} gutterBottom>{t('cart.empty')}</Typography>
         <Typography color="text.secondary" sx={{ mb: 3 }}>{t('cart.empty_sub')}</Typography>
         <Button variant="contained" onClick={() => navigate('/products')}>{t('cart.continue')}</Button>
-      </Container>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Typography variant="h2" gutterBottom>{t('cart.title')}</Typography>
 
       <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
@@ -106,6 +106,6 @@ export default function Cart() {
           </Button>
         </Paper>
       </Box>
-    </Container>
+    </Box>
   );
 }

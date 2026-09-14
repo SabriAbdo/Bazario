@@ -1,4 +1,4 @@
-import { Container, Typography, Box, Paper, Chip, TextField, InputAdornment } from '@mui/material';
+import { Typography, Box, Paper, Chip, TextField, InputAdornment } from '@mui/material';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { orderApi } from '@/api/orderApi';
@@ -16,6 +16,8 @@ const STATUS_COLOR: Record<CommandStatus, 'default' | 'warning' | 'info' | 'succ
   VALIDEE:        'success',
   REFUSEE:        'error',
   ANNULEE:        'error',
+  EN_ROUTE:       'info',
+  RETOURNEE:      'error',
 };
 
 const STATUS_LABEL: Record<CommandStatus, string> = {
@@ -27,6 +29,8 @@ const STATUS_LABEL: Record<CommandStatus, string> = {
   VALIDEE:        'Validée',
   REFUSEE:        'Refusée',
   ANNULEE:        'Annulée',
+  EN_ROUTE:       'En route',
+  RETOURNEE:      'Retournée',
 };
 
 export default function Orders() {
@@ -49,7 +53,7 @@ export default function Orders() {
     : commands;
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
       <Typography variant="h2" gutterBottom>Commandes</Typography>
       <TextField
         placeholder="Chercher par numéro, nom ou téléphone..."
@@ -98,6 +102,6 @@ export default function Orders() {
           ))}
         </Box>
       )}
-    </Container>
+    </Box>
   );
 }

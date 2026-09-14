@@ -22,6 +22,8 @@ const en = {
     categories_title: 'All categories',
     categories_subtitle: 'Find all types of products on Bazario',
     see_all_products: 'See all products →',
+    best_sellers_title: 'Best sellers',
+    best_sellers_subtitle: 'The most popular products right now',
     featured_title: 'Featured products',
     featured_subtitle: 'Our best selected products',
     see_all: 'See all →',

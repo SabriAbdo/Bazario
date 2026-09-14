@@ -6,11 +6,14 @@ import com.bazario.dto.ProductDto;
 import com.bazario.entity.User;
 import com.bazario.service.AdminService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.List;
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
+@Validated
 public class AdminController {
 
     private final AdminService adminService;
@@ -31,14 +35,15 @@ public class AdminController {
     @GetMapping("/users")
     public ResponseEntity<Page<AuthDto.UserDto>> getUsers(
             @RequestParam(required = false) String q,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size,
             @RequestParam(defaultValue = "fullName") String sort,
             @RequestParam(defaultValue = "asc") String sortDir) {
         return ResponseEntity.ok(adminService.getUsersPaged(q, page, size, sort, sortDir));
     }
 
     @PostMapping("/users")
+    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<AuthDto.UserDto> createUser(@Valid @RequestBody AdminDto.CreateUserRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(adminService.createUser(req));
     }
@@ -59,6 +64,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/users/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         adminService.deleteUser(id);
         return ResponseEntity.noContent().build();
@@ -93,8 +99,8 @@ public class AdminController {
 
     @GetMapping("/products/pending")
     public ResponseEntity<Page<ProductDto.Response>> getPendingProducts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
         return ResponseEntity.ok(adminService.getPendingProducts(page, size));
     }
 

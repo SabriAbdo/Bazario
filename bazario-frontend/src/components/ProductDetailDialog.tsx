@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import type { ReactNode } from 'react';
 import {
   Box, Typography, Button, Chip, alpha,
   Dialog, IconButton, Divider, TextField, Avatar, CircularProgress,
@@ -7,26 +6,6 @@ import {
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
-import GridViewIcon from '@mui/icons-material/GridView';
-import ElectricBoltIcon from '@mui/icons-material/ElectricBolt';
-import ComputerIcon from '@mui/icons-material/Computer';
-import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
-import CheckroomIcon from '@mui/icons-material/Checkroom';
-import ManIcon from '@mui/icons-material/Man';
-import ChildCareIcon from '@mui/icons-material/ChildCare';
-import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
-import KitchenIcon from '@mui/icons-material/Kitchen';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import SpaIcon from '@mui/icons-material/Spa';
-import ShoppingBasketIcon from '@mui/icons-material/ShoppingBasket';
-import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
-import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
-import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
-import PetsIcon from '@mui/icons-material/Pets';
-import HandymanIcon from '@mui/icons-material/Handyman';
-import LuggageIcon from '@mui/icons-material/Luggage';
-import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -37,57 +16,11 @@ import SendIcon from '@mui/icons-material/Send';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '../api/productApi';
+import { categoryApi } from '../api/miscApi';
 import { useAuthStore } from '../store/useAuthStore';
-import type { Product, ProductComment, ProductVariant, VariantType } from '../types';
+import type { Product, ProductComment, ProductVariant, VariantType, Category } from '../types';
+import { buildCategoryDisplays, findCategoryDisplays } from '../utils/categoryDisplay';
 import toast from 'react-hot-toast';
-
-// ─── Categories (Bazario — all product types) ───────────────────────────────
-export type CatKey =
-  | 'all' | 'electronique' | 'informatique' | 'telephonie'
-  | 'mode-femme' | 'mode-homme' | 'mode-enfant' | 'chaussures'
-  | 'maison-deco' | 'electromenager' | 'sport-fitness' | 'beaute-sante'
-  | 'alimentation' | 'livres-culture' | 'jouets-jeux' | 'auto-moto'
-  | 'jardin' | 'animalerie' | 'bricolage' | 'voyage-bagages' | 'bureau-papeterie';
-
-export const CATEGORIES: { key: CatKey; label: string; icon: ReactNode; color: string }[] = [
-  { key: 'all',              label: 'Tous',              icon: <GridViewIcon />,       color: '#1A237E' },
-  { key: 'electronique',     label: 'Electronique',      icon: <ElectricBoltIcon />,   color: '#FF6B35' },
-  { key: 'informatique',     label: 'Informatique',      icon: <ComputerIcon />,       color: '#1565C0' },
-  { key: 'telephonie',       label: 'Telephonie',        icon: <PhoneAndroidIcon />,   color: '#6A1B9A' },
-  { key: 'mode-femme',       label: 'Mode Femme',        icon: <CheckroomIcon />,      color: '#E91E63' },
-  { key: 'mode-homme',       label: 'Mode Homme',        icon: <ManIcon />,            color: '#1976D2' },
-  { key: 'mode-enfant',      label: 'Mode Enfant',       icon: <ChildCareIcon />,      color: '#FF9800' },
-  { key: 'chaussures',       label: 'Chaussures',        icon: <CheckroomIcon />,      color: '#795548' },
-  { key: 'maison-deco',      label: 'Maison & Deco',     icon: <HomeOutlinedIcon />,   color: '#009688' },
-  { key: 'electromenager',   label: 'Electromenager',    icon: <KitchenIcon />,        color: '#607D8B' },
-  { key: 'sport-fitness',    label: 'Sport & Fitness',   icon: <FitnessCenterIcon />,  color: '#4CAF50' },
-  { key: 'beaute-sante',     label: 'Beaute & Sante',    icon: <SpaIcon />,            color: '#F06292' },
-  { key: 'alimentation',     label: 'Alimentation',      icon: <ShoppingBasketIcon />, color: '#8BC34A' },
-  { key: 'livres-culture',   label: 'Livres & Culture',  icon: <LibraryBooksIcon />,   color: '#5C6BC0' },
-  { key: 'jouets-jeux',      label: 'Jouets & Jeux',     icon: <SmartToyIcon />,       color: '#FF5722' },
-  { key: 'auto-moto',        label: 'Auto & Moto',       icon: <DirectionsCarIcon />,  color: '#78909C' },
-  { key: 'jardin',           label: 'Jardin',            icon: <LocalFloristIcon />,   color: '#66BB6A' },
-  { key: 'animalerie',       label: 'Animalerie',        icon: <PetsIcon />,           color: '#FFCA28' },
-  { key: 'bricolage',        label: 'Bricolage',         icon: <HandymanIcon />,       color: '#FF7043' },
-  { key: 'voyage-bagages',   label: 'Voyage & Bagages',  icon: <LuggageIcon />,        color: '#26C6DA' },
-  { key: 'bureau-papeterie', label: 'Bureau',            icon: <WorkOutlineIcon />,    color: '#AB47BC' },
-];
-
-/** Returns the CatKey for a product based on its categorie slug. */
-export function getCategory(libelle: string): CatKey {
-  return 'all';
-}
-
-// Map backend category slug → CatKey (slugs match keys directly)
-export const CATEGORIE_MAP: Record<string, CatKey> = {
-  'electronique': 'electronique', 'informatique': 'informatique', 'telephonie': 'telephonie',
-  'mode-femme': 'mode-femme', 'mode-homme': 'mode-homme', 'mode-enfant': 'mode-enfant',
-  'chaussures': 'chaussures', 'maison-deco': 'maison-deco', 'electromenager': 'electromenager',
-  'sport-fitness': 'sport-fitness', 'beaute-sante': 'beaute-sante', 'alimentation': 'alimentation',
-  'livres-culture': 'livres-culture', 'jouets-jeux': 'jouets-jeux', 'auto-moto': 'auto-moto',
-  'jardin': 'jardin', 'animalerie': 'animalerie', 'bricolage': 'bricolage',
-  'voyage-bagages': 'voyage-bagages', 'bureau-papeterie': 'bureau-papeterie',
-};
 
 export const UNITE_LABEL: Record<string, string> = {
   PIECE: 'pce', METRE: 'm', BOBINE: 'bobine', LOT: 'lot', KG: 'kg', LITRE: 'L',
@@ -207,10 +140,13 @@ function CommentSection({ productId }: { productId: number }) {
 export default function ProductDetailDialog({ product, added, onAdd, onClose }: {
   product: Product; added: boolean; onAdd: (qty: number) => void; onClose: () => void;
 }) {
-  const catKey: CatKey = product.categorie
-    ? (CATEGORIE_MAP[product.categorie] ?? 'all')
-    : getCategory(product.libelle);
-  const cat = CATEGORIES.find((c) => c.key === catKey) ?? CATEGORIES[0];
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: () => categoryApi.getAll(),
+  });
+  const categoryDisplays = buildCategoryDisplays(categories);
+  const productCats = findCategoryDisplays(categoryDisplays, product.categories);
+  const cat = productCats[0];
   const uniteLabel = UNITE_LABEL[product.unite ?? 'PIECE'] ?? 'pce';
   const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixPromo < product.prix;
   const [imgIdx, setImgIdx] = useState(0);
@@ -243,11 +179,13 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
       PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden', maxHeight: '95vh' } }}>
 
       {/* ── Header bar ── */}
-      <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#fafafa', flexShrink: 0 }}>
-        <Chip label={cat.label} size="small"
-          icon={<Box sx={{ color: cat.color, display: 'flex', '& svg': { fontSize: 13 } }}>{cat.icon}</Box>}
-          sx={{ bgcolor: alpha(cat.color, 0.08), color: cat.color, fontWeight: 700, fontSize: '0.7rem', border: `1px solid ${alpha(cat.color, 0.25)}` }}
-        />
+      <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#fafafa', flexShrink: 0, gap: 0.75, flexWrap: 'wrap' }}>
+        {productCats.map((c) => (
+          <Chip key={c.key} label={c.label} size="small"
+            icon={<Box sx={{ color: c.color, display: 'flex', '& svg': { fontSize: 13 } }}>{c.icon}</Box>}
+            sx={{ bgcolor: alpha(c.color, 0.08), color: c.color, fontWeight: 700, fontSize: '0.7rem', border: `1px solid ${alpha(c.color, 0.25)}` }}
+          />
+        ))}
         <Box sx={{ flex: 1 }} />
         <IconButton size="small" onClick={onClose}
           sx={{ bgcolor: alpha('#000', 0.05), '&:hover': { bgcolor: alpha('#000', 0.12) } }}>

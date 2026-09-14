@@ -15,6 +15,7 @@ import SellIcon from '@mui/icons-material/Sell';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/api/adminApi';
 import type { Product } from '@/types';
+import { formatCategoryList } from '@/utils/categoryDisplay';
 import toast from 'react-hot-toast';
 
 const PAGE_SIZE = 12;
@@ -50,7 +51,7 @@ function ProductPreviewDialog({ product, onClose, onApprove, onReject, approving
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
           <Box><Typography variant="caption" color="text.secondary">Référence</Typography><Typography fontFamily="monospace">{product.reference ?? '—'}</Typography></Box>
           <Box><Typography variant="caption" color="text.secondary">Marque</Typography><Typography>{product.marque ?? '—'}</Typography></Box>
-          <Box><Typography variant="caption" color="text.secondary">Catégorie</Typography><Typography>{product.categorie ?? '—'}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Catégorie</Typography><Typography>{formatCategoryList(product.categories)}</Typography></Box>
           <Box><Typography variant="caption" color="text.secondary">Unité · Qté min</Typography><Typography>{product.unite} · {product.quantiteMin}</Typography></Box>
           <Box>
             <Typography variant="caption" color="text.secondary">Prix</Typography>
@@ -219,7 +220,7 @@ export default function AdminApprobations() {
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
                           <CategoryIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                          <Typography variant="caption" color="text.secondary">{product.categorie ?? '—'}</Typography>
+                          <Typography variant="caption" color="text.secondary">{formatCategoryList(product.categories)}</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
                           <SellIcon sx={{ fontSize: 14, color: 'text.disabled' }} />

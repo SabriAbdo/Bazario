@@ -27,4 +27,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT o FROM Order o WHERE o.status != :status AND (LOWER(o.nom) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(o.prenom) LIKE LOWER(CONCAT('%',:q,'%')) OR o.telephone LIKE CONCAT('%',:q,'%'))")
     Page<Order> searchHistorique(@Param("q") String q, @Param("status") Order.OrderStatus status, Pageable pageable);
+
+    Page<Order> findByStatusIn(List<Order.OrderStatus> statuses, Pageable pageable);
+
+    @Query("SELECT o FROM Order o WHERE o.status IN :statuses AND (LOWER(o.nom) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(o.prenom) LIKE LOWER(CONCAT('%',:q,'%')) OR o.telephone LIKE CONCAT('%',:q,'%'))")
+    Page<Order> searchByStatuses(@Param("q") String q, @Param("statuses") List<Order.OrderStatus> statuses, Pageable pageable);
+
+    @Query("SELECT o FROM Order o WHERE o.status = :status AND (LOWER(o.nom) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(o.prenom) LIKE LOWER(CONCAT('%',:q,'%')) OR o.telephone LIKE CONCAT('%',:q,'%'))")
+    Page<Order> searchByStatus(@Param("q") String q, @Param("status") Order.OrderStatus status, Pageable pageable);
 }

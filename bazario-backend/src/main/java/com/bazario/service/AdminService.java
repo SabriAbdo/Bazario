@@ -3,6 +3,7 @@ package com.bazario.service;
 import com.bazario.dto.AdminDto;
 import com.bazario.dto.AuthDto;
 import com.bazario.entity.AppConfig;
+import com.bazario.entity.Category;
 import com.bazario.entity.Order;
 import com.bazario.entity.Product;
 import com.bazario.entity.User;
@@ -176,10 +177,13 @@ public class AdminService {
                 ? p.getVariants().stream().map(v -> new com.bazario.dto.ProductDto.VariantResponse(
                         v.getId(), v.getType(), v.getValeur(), v.getPrixSupplement(), v.getStock())).toList()
                 : java.util.List.of();
+        java.util.List<String> categorySlugs = p.getCategories() != null
+                ? p.getCategories().stream().map(Category::getSlug).toList()
+                : java.util.List.of();
         return new com.bazario.dto.ProductDto.Response(
                 p.getId(), p.getLibelle(), p.getDescription(), p.getPrix(),
                 p.isPrixActif(), p.getPrixPromo(),
-                p.getReference(), p.getMarque(), p.getCategorie(),
+                p.getReference(), p.getMarque(), categorySlugs,
                 p.getUnite() != null ? p.getUnite() : com.bazario.entity.Unite.PIECE,
                 p.getQuantiteMin(),
                 p.getCreatedBy() != null ? p.getCreatedBy().getId() : null,

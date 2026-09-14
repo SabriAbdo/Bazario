@@ -2,10 +2,13 @@ import { Card, CardContent, Typography, Box, Chip, IconButton, Tooltip } from '@
 import { AddShoppingCart } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Product } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import { Category, Product } from '@/types';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useCartStore } from '@/store/useCartStore';
 import { productApi } from '@/api/productApi';
+import { categoryApi } from '@/api/miscApi';
+import { buildCategoryDisplays, findCategoryDisplays } from '@/utils/categoryDisplay';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -17,6 +20,11 @@ interface Props {
 export default function ProductCard({ product }: Props) {
   const addItem = useCartStore((s) => s.addItem);
   const { t } = useTranslation();
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: () => categoryApi.getAll(),
+  });
+  const productCat = findCategoryDisplays(buildCategoryDisplays(categories), product.categories)[0];
   const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixActif;
   const displayPrice = hasPromo ? product.prixPromo! : product.prix;
   const image = product.images?.[0];
@@ -49,10 +57,8 @@ export default function ProductCard({ product }: Props) {
           {product.marque && (
             <Typography variant="caption" color="text.secondary" noWrap>{product.marque}</Typography>
           )}
-          {product.categorie && (
-            <Chip label={product.categorie} size="small"
-              sx={{ width: 'fit-content', fontSize: '0.62rem', height: 18 }} />
-          )}
+          <Chip label={productCat.label} size="small"
+            sx={{ width: 'fit-content', fontSize: '0.62rem', height: 18 }} />
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 'auto', pt: 1 }}>
             <Box>
               <Typography variant="h6" color="primary" fontWeight={700} fontSize="0.95rem">

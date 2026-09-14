@@ -70,7 +70,7 @@ public class Order {
     }
 
     public enum OrderStatus {
-        EN_ATTENTE, CONFIRMEE, EN_PREPARATION, EXPEDIEE, LIVREE, VALIDEE, REFUSEE, ANNULEE
+        EN_ATTENTE, CONFIRMEE, EN_PREPARATION, EXPEDIEE, EN_ROUTE, LIVREE, RETOURNEE, VALIDEE, REFUSEE, ANNULEE
     }
 
     public enum OrderType {

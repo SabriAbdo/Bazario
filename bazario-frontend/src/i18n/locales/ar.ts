@@ -23,6 +23,8 @@ const ar: any = {
     categories_title: 'جميع الفئات',
     categories_subtitle: 'اعثر على جميع أنواع المنتجات في بازاريو',
     see_all_products: '← عرض جميع المنتجات',
+    best_sellers_title: 'الأكثر مبيعاً',
+    best_sellers_subtitle: 'المنتجات الأكثر رواجاً حالياً',
     featured_title: 'المنتجات المميزة',
     featured_subtitle: 'مجموعة مختارة من أفضل منتجاتنا',
     see_all: '← عرض الكل',

@@ -26,6 +26,7 @@ import Wishlist from './pages/Wishlist';
 // Operateur pages
 import OperateurCommandes from './pages/operateur/Commandes';
 import OperateurHistorique from './pages/operateur/Historique';
+import OperateurSuiviCommandes from './pages/operateur/SuiviCommandes';
 
 // Stock-Operateur pages
 import StockProduits from './pages/stock/Produits';
@@ -37,10 +38,12 @@ import StockCategories from './pages/stock/Categories';
 // Admin pages
 import AdminUtilisateurs from './pages/admin/Utilisateurs';
 import AdminCommandes from './pages/admin/Commandes';
+import AdminSuiviCommandes from './pages/admin/SuiviCommandes';
 import AdminProduits from './pages/admin/Products';
 import AdminActivite from './pages/admin/Activite';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminApprobations from './pages/admin/Approbations';
+import AdminCategories from './pages/admin/Categories';
 
 // ─── Protected route ─────────────────────────────────────────────────────────
 interface ProtectedProps {
@@ -78,6 +81,7 @@ export default function App() {
 
             {/* Operateur */}
             <Route path="/operateur/commandes" element={<Protected roles={['OPERATEUR', 'ADMIN']}><OperateurCommandes /></Protected>} />
+            <Route path="/operateur/suivi-commandes" element={<Protected roles={['OPERATEUR', 'ADMIN']}><OperateurSuiviCommandes /></Protected>} />
             <Route path="/operateur/historique" element={<Protected roles={['OPERATEUR', 'ADMIN']}><OperateurHistorique /></Protected>} />
 
             {/* Stock-Operateur */}
@@ -91,9 +95,12 @@ export default function App() {
             <Route path="/admin" element={<Protected roles={['ADMIN']}><AdminDashboard /></Protected>} />
             <Route path="/admin/utilisateurs" element={<Protected roles={['ADMIN']}><AdminUtilisateurs /></Protected>} />
             <Route path="/admin/commandes" element={<Protected roles={['ADMIN']}><AdminCommandes /></Protected>} />
+            <Route path="/admin/suivi-commandes" element={<Protected roles={['ADMIN']}><AdminSuiviCommandes /></Protected>} />
             <Route path="/admin/produits" element={<Protected roles={['ADMIN']}><AdminProduits /></Protected>} />
             <Route path="/admin/approbations" element={<Protected roles={['ADMIN']}><AdminApprobations /></Protected>} />
             <Route path="/admin/activite" element={<Protected roles={['ADMIN']}><AdminActivite /></Protected>} />
+            {/* Categories view also open to Operateur (read-only) so photos added by the stock manager remain visible */}
+            <Route path="/admin/categories" element={<Protected roles={['ADMIN', 'OPERATEUR']}><AdminCategories /></Protected>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />

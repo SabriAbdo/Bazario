@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useOutlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AppBar, Toolbar, Typography, Box, Button, Badge, IconButton, Chip,
@@ -9,7 +9,6 @@ import {
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
-import BoltIcon from '@mui/icons-material/Bolt';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
@@ -26,12 +25,14 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import EmailIcon from '@mui/icons-material/Email';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useCartStore } from '../../store/useCartStore';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/api/adminApi';
 import ContactExpertButton from '../ContactExpertButton';
 import LanguageSwitcher from '../LanguageSwitcher';
+import bazarioLogo from '../../assets/bazario-logo.png';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Admin',
@@ -45,10 +46,21 @@ const ROLE_COLORS: Record<string, string> = {
   STOCK_OPERATEUR: '#6A1FAA',
 };
 
+// Freezes the matched route element on mount so the exiting page keeps rendering its
+// own content instead of picking up the new route via router context while it fades out.
+function AnimatedOutlet() {
+  const outlet = useOutlet();
+  const [element] = useState(outlet);
+  return element;
+}
+
 const NAV_LINKS = {
   OPERATEUR: [
     { label: 'Commandes', path: '/operateur/commandes', icon: <AssignmentIcon fontSize="small" /> },
+    { label: 'Suivi Commandes', path: '/operateur/suivi-commandes', icon: <LocalShippingIcon fontSize="small" /> },
     { label: 'Historique', path: '/operateur/historique', icon: <HistoryIcon fontSize="small" /> },
+    { label: 'Catalogue', path: '/products', icon: <HomeIcon fontSize="small" /> },
+    { label: 'Catégories', path: '/admin/categories', icon: <CategoryIcon fontSize="small" /> },
   ],
   STOCK_OPERATEUR: [
     { label: 'Catalogue', path: '/', icon: <HomeIcon fontSize="small" /> },
@@ -61,7 +73,9 @@ const NAV_LINKS = {
     { label: 'Dashboard',     path: '/admin',                icon: <BarChartIcon fontSize="small" /> },
     { label: 'Utilisateurs',  path: '/admin/utilisateurs',   icon: <PeopleIcon fontSize="small" /> },
     { label: 'Commandes',     path: '/admin/commandes',      icon: <AssignmentIcon fontSize="small" /> },
+    { label: 'Suivi Commandes', path: '/admin/suivi-commandes', icon: <LocalShippingIcon fontSize="small" /> },
     { label: 'Produits',      path: '/admin/produits',       icon: <InventoryIcon fontSize="small" /> },
+    { label: 'Catégories',    path: '/admin/categories',     icon: <CategoryIcon fontSize="small" /> },
     { label: 'Approbations',  path: '/admin/approbations',   icon: <PendingActionsIcon fontSize="small" /> },
     { label: 'Activité',      path: '/admin/activite',       icon: <HistoryIcon fontSize="small" /> },
   ],
@@ -155,16 +169,15 @@ export default function MainLayout() {
 
           {/* Logo */}
           <Box
-            sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', mr: 2 }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1.25, cursor: 'pointer', mr: 2 }}
             onClick={() => navigate('/')}
           >
             <Box sx={{
-              background: 'linear-gradient(135deg, #E8521A 0%, #F0723D 100%)',
-              borderRadius: 1.5, p: 0.5,
+              width: 46, height: 46, borderRadius: 2.5, bgcolor: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 10px rgba(0,149,48,0.4)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.25)', flexShrink: 0,
             }}>
-              <BoltIcon sx={{ fontSize: 22, color: '#fff' }} />
+              <Box component="img" src={bazarioLogo} alt="Bazario" sx={{ width: 34, height: 34, objectFit: 'contain' }} />
             </Box>
             <Box>
               <Typography
@@ -272,8 +285,12 @@ export default function MainLayout() {
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: user ? 2.5 : 0 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ background: 'linear-gradient(135deg, #E8521A 0%, #F0723D 100%)', borderRadius: 1.5, p: 0.55, display: 'flex', boxShadow: '0 2px 8px rgba(232,82,26,0.45)' }}>
-                  <BoltIcon sx={{ fontSize: 20, color: '#fff' }} />
+                <Box sx={{
+                  width: 40, height: 40, borderRadius: 2, bgcolor: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                }}>
+                  <Box component="img" src={bazarioLogo} alt="Bazario" sx={{ width: 28, height: 28, objectFit: 'contain' }} />
                 </Box>
                 <Box>
                   <Typography fontWeight={800} letterSpacing="0.06em" fontSize="1rem" lineHeight={1}>BAZARIO</Typography>
@@ -359,13 +376,13 @@ export default function MainLayout() {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
             style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
           >
-            <Outlet />
+            <AnimatedOutlet />
           </motion.div>
         </AnimatePresence>
       </Box>
@@ -380,9 +397,7 @@ export default function MainLayout() {
             {/* Brand */}
             <Box sx={{ minWidth: 200 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <Box sx={{ bgcolor: '#E8521A', borderRadius: 1, p: 0.6, display: 'flex' }}>
-                  <BoltIcon sx={{ fontSize: 18, color: '#fff' }} />
-                </Box>
+                <Box component="img" src={bazarioLogo} alt="Bazario" sx={{ width: 28, height: 28, objectFit: 'contain' }} />
                 <Typography fontWeight={800} fontSize="1.15rem" letterSpacing="0.06em" color="#fff">
                   BAZARIO
                 </Typography>
