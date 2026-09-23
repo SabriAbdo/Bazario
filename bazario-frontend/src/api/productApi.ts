@@ -71,7 +71,8 @@ export const productApi = {
     axiosClient.get<PagedResponse<Product>>('/products/deleted', { params }).then((r) => r.data),
   restore: (id: number) =>
     axiosClient.put<Product>(`/products/${id}/restore`).then((r) => r.data),
-  imageUrl: (path: string) => path,
+  /** Resolves a stored relative image path to an absolute URL (cross-origin prod deploys). */
+  imageUrl: (path: string) => (/^https?:\/\//i.test(path) ? path : `${BASE_URL}${path}`),
 
   /** Variant management */
   addVariant: (productId: number, data: AddVariantRequest) =>
