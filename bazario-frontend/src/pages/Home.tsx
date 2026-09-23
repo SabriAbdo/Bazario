@@ -7,57 +7,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Search } from '@mui/icons-material';
+import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import { productApi } from '@/api/productApi';
 import { categoryApi } from '@/api/miscApi';
 import ProductCarousel from '@/components/product/ProductCarousel';
 import type { Category, PagedResponse, Product } from '@/types';
-import {
-  ElectricBolt, Computer, PhoneAndroid, Checkroom, Man, ChildCare,
-  HomeOutlined, Kitchen, FitnessCenter, Spa, ShoppingBasket,
-  LibraryBooks, SmartToy, DirectionsCar, LocalFlorist, Pets,
-  Handyman, Luggage, WorkOutline, Category as CategoryIcon,
-  ElectricalServices, Cable, Power, Dashboard, Lightbulb, ElectricMeter,
-  SettingsInputComponent, WbSunny, Router, Shield,
-} from '@mui/icons-material';
-import { ICON_REGISTRY } from '@/utils/iconRegistry';
 import { useTranslation } from 'react-i18next';
 
-const SLUG_ICONS: Record<string, React.ElementType> = {
-  // ── Electrical (uppercase slugs from DB) ─────────────────────────────────
-  'DISJONCTEUR': ElectricalServices,
-  'CABLE':       Cable,
-  'PRISE':       Power,
-  'TABLEAU':     Dashboard,
-  'ECLAIRAGE':   Lightbulb,
-  'TRANSFO':     ElectricMeter,
-  'MOTEUR':      SettingsInputComponent,
-  'SOLAIRE':     WbSunny,
-  'DOMOTIQUE':   Router,
-  'OUTILLAGE':   Handyman,
-  'SECURITE':    Shield,
-  'AUTRE':       CategoryIcon,
-  // ── Generic marketplace (lowercase slugs) ────────────────────────────────
-  'electronique':     ElectricBolt,
-  'informatique':     Computer,
-  'telephonie':       PhoneAndroid,
-  'mode-femme':       Checkroom,
-  'mode-homme':       Man,
-  'mode-enfant':      ChildCare,
-  'chaussures':       Checkroom,
-  'maison-deco':      HomeOutlined,
-  'electromenager':   Kitchen,
-  'sport-fitness':    FitnessCenter,
-  'beaute-sante':     Spa,
-  'alimentation':     ShoppingBasket,
-  'livres-culture':   LibraryBooks,
-  'jouets-jeux':      SmartToy,
-  'auto-moto':        DirectionsCar,
-  'jardin':           LocalFlorist,
-  'animalerie':       Pets,
-  'bricolage':        Handyman,
-  'voyage-bagages':   Luggage,
-  'bureau-papeterie': WorkOutline,
-};
+// Empty in dev (Vite proxy) and same-origin prod; set VITE_API_BASE_URL for cross-origin deploys
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 const CAT_COLORS = [
   '#E8521A','#3730A3','#D97706','#16A34A','#DC2626',
@@ -181,7 +139,6 @@ export default function Home() {
           <Grid container spacing={2}>
             {categories
               ? categories.map((cat, idx) => {
-                  const Icon = (cat.icon ? ICON_REGISTRY[cat.icon] : null) ?? SLUG_ICONS[cat.slug] ?? CategoryIcon;
                   const color = CAT_COLORS[idx % CAT_COLORS.length];
                   return (
                     <Grid item xs={6} sm={4} md={3} lg={2} key={cat.id}>
@@ -197,8 +154,10 @@ export default function Home() {
                           '&:hover':{ borderColor:color, transform:'translateY(-4px)', boxShadow:`0 8px 24px ${alpha(color,0.22)}` },
                         }}
                       >
-                        <Box sx={{ width:52,height:52,borderRadius:'50%',bgcolor:alpha(color,0.12),display:'flex',alignItems:'center',justifyContent:'center' }}>
-                          <Icon sx={{ fontSize:26, color }} />
+                        <Box sx={{ width:52,height:52,borderRadius:'50%',bgcolor:alpha(color,0.12),display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden' }}>
+                          {cat.imageUrl
+                            ? <Box component="img" src={`${API_BASE}${cat.imageUrl}`} alt={cat.label} sx={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                            : <ImageNotSupportedIcon sx={{ fontSize:24, color }} />}
                         </Box>
                         <Typography sx={{ fontWeight:600, textAlign:'center', fontSize:'0.78rem', lineHeight:1.3 }}>
                           {cat.label}

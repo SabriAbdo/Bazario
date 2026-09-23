@@ -24,4 +24,19 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             @Param("cancelled") Order.OrderStatus cancelled,
             @Param("refused") Order.OrderStatus refused,
             Pageable pageable);
+
+    /** Aggregated sales per product: [productId, libelleSnapshot, totalQuantity, totalRevenue] */
+    @Query("""
+        SELECT oi.productId, oi.libelleSnapshot, SUM(oi.quantite), SUM(oi.prixSnapshot * oi.quantite)
+        FROM OrderItem oi
+        WHERE oi.order.status <> :cancelled
+          AND oi.order.status <> :refused
+          AND oi.productId IS NOT NULL
+        GROUP BY oi.productId, oi.libelleSnapshot
+        ORDER BY SUM(oi.quantite) DESC
+        """)
+    List<Object[]> findTopSellingProducts(
+            @Param("cancelled") Order.OrderStatus cancelled,
+            @Param("refused") Order.OrderStatus refused,
+            Pageable pageable);
 }

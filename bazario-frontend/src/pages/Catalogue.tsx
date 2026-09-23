@@ -77,8 +77,8 @@ function ProductCard({ product, categoryDisplays, added, onAdd, onDetails, isSto
             display: 'flex', alignItems: 'center', gap: 1.5,
           }}>
             <Box sx={{
-              bgcolor: alpha(cat.color, 0.15), borderRadius: 2, p: 1,
-              display: 'flex', color: cat.color, flexShrink: 0,
+              bgcolor: alpha(cat.color, 0.15), borderRadius: 2, width: 32, height: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: cat.color, flexShrink: 0, overflow: 'hidden',
             }}>
               {cat.icon}
             </Box>
@@ -412,8 +412,8 @@ export default function Catalogue() {
       </Box>
 
       {/* ── Category Filter ──────────────────────────────────────────────────── */}
-      <Box sx={{ bgcolor: '#fff', borderBottom: '1px solid', borderColor: 'divider', px: { xs: 2, md: 4 }, py: 1.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Box sx={{ bgcolor: '#fff', borderBottom: '1px solid', borderColor: 'divider', px: { xs: 2, md: 4 }, py: 2.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <IconButton
             size="small" onClick={() => scrollCategories('left')}
             sx={{ flexShrink: 0, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}
@@ -422,28 +422,58 @@ export default function Catalogue() {
           </IconButton>
           <Box
             ref={categoryScrollRef}
-            sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.5, scrollBehavior: 'smooth', '&::-webkit-scrollbar': { height: 3 } }}
+            sx={{
+              display: 'flex', gap: 2.5, overflowX: 'auto', overflowY: 'hidden', px: 0.5, pt: 0.5, pb: 1.5,
+              scrollBehavior: 'smooth',
+              '&::-webkit-scrollbar': { height: 5 },
+              '&::-webkit-scrollbar-thumb': { bgcolor: alpha('#0D1E36', 0.15), borderRadius: 4 },
+            }}
           >
             {categoryDisplays.map((cat) => {
               const count = categoryCount(cat.key);
               const active = activeCategory === cat.key;
               return (
-                <Chip
-                  key={cat.key}
-                  icon={<Box sx={{ color: active ? '#fff' : cat.color, display: 'flex', '& svg': { fontSize: 16 } }}>{cat.icon}</Box>}
-                  label={`${cat.label}${count > 0 ? ` (${count})` : ''}`}
-                  onClick={() => setActiveCategory(cat.key)}
-                  sx={{
-                    borderRadius: 6, fontWeight: active ? 700 : 500,
-                    fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer',
-                    bgcolor: active ? cat.color : alpha(cat.color, 0.08),
-                    color: active ? '#fff' : cat.color,
-                    border: `1px solid ${active ? cat.color : alpha(cat.color, 0.3)}`,
-                    '& .MuiChip-label': { pl: 0.5 },
-                    '&:hover': { bgcolor: active ? cat.color : alpha(cat.color, 0.16) },
-                    flexShrink: 0,
-                  }}
-                />
+                <motion.div key={cat.key} whileHover={{ y: -4 }} whileTap={{ scale: 0.94 }} style={{ flexShrink: 0 }}>
+                  <Box
+                    onClick={() => setActiveCategory(cat.key)}
+                    sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, cursor: 'pointer', width: 82 }}
+                  >
+                    <Box sx={{ position: 'relative' }}>
+                      <Box sx={{
+                        width: 68, height: 68, borderRadius: '50%', p: '3px', display: 'flex',
+                        background: active
+                          ? `linear-gradient(135deg, ${cat.color}, ${alpha(cat.color, 0.5)})`
+                          : `linear-gradient(135deg, ${alpha(cat.color, 0.18)}, ${alpha(cat.color, 0.06)})`,
+                        boxShadow: active ? `0 8px 18px ${alpha(cat.color, 0.4)}` : `0 2px 6px ${alpha('#0D1E36', 0.08)}`,
+                        transition: 'all 0.25s ease',
+                      }}>
+                        <Box sx={{
+                          width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden',
+                          bgcolor: '#fff', border: '2px solid #fff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: cat.color, '& svg': { fontSize: 28 }, '& img': { width: '100%', height: '100%', objectFit: 'cover' },
+                        }}>
+                          {cat.icon}
+                        </Box>
+                      </Box>
+                      {count > 0 && (
+                        <Box sx={{
+                          position: 'absolute', top: -4, right: -4, minWidth: 20, height: 20, px: 0.5, borderRadius: 10,
+                          bgcolor: active ? cat.color : '#0D1E36', color: '#fff', fontSize: '0.62rem', fontWeight: 800,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff',
+                        }}>
+                          {count}
+                        </Box>
+                      )}
+                    </Box>
+                    <Typography sx={{
+                      fontSize: '0.72rem', fontWeight: active ? 700 : 600, color: active ? cat.color : 'text.secondary',
+                      textAlign: 'center', lineHeight: 1.2, maxWidth: 82, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>
+                      {cat.label}
+                    </Typography>
+                  </Box>
+                </motion.div>
               );
             })}
           </Box>

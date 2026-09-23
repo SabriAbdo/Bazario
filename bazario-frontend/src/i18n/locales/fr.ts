@@ -13,6 +13,8 @@ const fr: any = {
     light_mode: 'Mode clair',
     seller: 'Vendeur',
     admin: 'Admin',
+    notifications: 'Notifications',
+    no_notifications: 'Aucune notification pour le moment',
   },
   home: {
     tagline: 'Tout ce dont vous avez besoin, en un seul endroit',

@@ -182,7 +182,7 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
       <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#fafafa', flexShrink: 0, gap: 0.75, flexWrap: 'wrap' }}>
         {productCats.map((c) => (
           <Chip key={c.key} label={c.label} size="small"
-            icon={<Box sx={{ color: c.color, display: 'flex', '& svg': { fontSize: 13 } }}>{c.icon}</Box>}
+            icon={<Box sx={{ width: 16, height: 16, borderRadius: '50%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: c.color, '& svg': { fontSize: 13 } }}>{c.icon}</Box>}
             sx={{ bgcolor: alpha(c.color, 0.08), color: c.color, fontWeight: 700, fontSize: '0.7rem', border: `1px solid ${alpha(c.color, 0.25)}` }}
           />
         ))}
@@ -272,7 +272,7 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', color: cat.color, gap: 1 }}>
-                <Box sx={{ bgcolor: alpha(cat.color, 0.08), borderRadius: 3, p: 4, display: 'flex' }}>{cat.icon}</Box>
+                <Box sx={{ bgcolor: alpha(cat.color, 0.08), borderRadius: 3, width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>{cat.icon}</Box>
                 <Typography variant="caption" color="text.secondary">Pas de photo</Typography>
               </Box>
             )}

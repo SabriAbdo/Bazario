@@ -12,6 +12,8 @@ const en = {
     light_mode: 'Light mode',
     seller: 'Seller',
     admin: 'Admin',
+    notifications: 'Notifications',
+    no_notifications: 'No notifications yet',
   },
   home: {
     tagline: 'Everything you need, in one place',

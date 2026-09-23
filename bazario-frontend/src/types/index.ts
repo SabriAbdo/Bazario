@@ -63,7 +63,6 @@ export interface Category {
   id: number;
   slug: string;
   label: string;
-  icon?: string;
   imageUrl?: string;
 }
 
@@ -138,6 +137,54 @@ export interface AdminStats {
   commandsRefusees: number;
   pendingApprovalProducts: number;
   bannedUsers: number;
+}
+
+export interface RevenuePoint {
+  date: string;
+  orders: number;
+  revenue: number;
+}
+
+export interface StatusCount {
+  status: string;
+  count: number;
+}
+
+export interface RoleCount {
+  role: string;
+  count: number;
+}
+
+export interface TopProductStat {
+  productId: number;
+  label: string;
+  quantitySold: number;
+  revenue: number;
+}
+
+export interface TopCategoryStat {
+  label: string;
+  revenue: number;
+  quantitySold: number;
+}
+
+export interface MonthlyPoint {
+  month: string;
+  count: number;
+}
+
+export interface AdvancedAdminStats {
+  revenueSeries: RevenuePoint[];
+  ordersByStatus: StatusCount[];
+  usersByRole: RoleCount[];
+  topProducts: TopProductStat[];
+  topCategories: TopCategoryStat[];
+  userGrowth: MonthlyPoint[];
+  ordersLast7Days: number;
+  ordersLast30Days: number;
+  revenueLast30Days: number;
+  avgOrderValue: number;
+  approvalRate: number;
 }
 
 // ─── Cart (client-side only) ─────────────────────────────────────────────────

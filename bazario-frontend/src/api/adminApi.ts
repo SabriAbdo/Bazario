@@ -1,5 +1,5 @@
 ﻿import axiosClient from './axiosClient';
-import type { User, ActivityLog, AdminStats, PagedResponse, Product } from '../types';
+import type { User, ActivityLog, AdminStats, AdvancedAdminStats, PagedResponse, Product } from '../types';
 
 export interface CreateUserRequest {
   username: string;
@@ -11,6 +11,8 @@ export interface CreateUserRequest {
 export const adminApi = {
   getStats: () =>
     axiosClient.get<AdminStats>('/admin/stats').then((r) => r.data),
+  getAdvancedStats: () =>
+    axiosClient.get<AdvancedAdminStats>('/admin/stats/advanced').then((r) => r.data),
   getUsers: (q?: string) =>
     axiosClient.get<PagedResponse<User>>('/admin/users', { params: { size: 200, ...(q ? { q } : {}) } }).then((r) => r.data.content),
   createUser: (data: CreateUserRequest) =>

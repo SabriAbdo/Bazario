@@ -7,6 +7,7 @@ import { Category } from '@/types';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/useAuthStore';
+import ImageCropDialog from '@/components/common/ImageCropDialog';
 
 // Empty in dev (Vite proxy) and same-origin prod; set VITE_API_BASE_URL for cross-origin deploys
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -22,7 +23,12 @@ export default function AdminCategories() {
   const createFileRef = useRef<HTMLInputElement>(null);
   // maps category id → hidden input ref for per-row uploads
   const rowFileRefs = useRef<Record<number, HTMLInputElement | null>>({});
-  const { register, handleSubmit, reset } = useForm<{ name: string; iconName?: string }>();
+  const { register, handleSubmit, reset } = useForm<{ name: string }>();
+
+  // Crop dialog state: 'create' targets the new-category picker, a number targets a row's image
+  const [cropTarget, setCropTarget] = useState<'create' | number | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropFileName, setCropFileName] = useState('image.jpg');
 
   const { data } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -30,8 +36,8 @@ export default function AdminCategories() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (d: { name: string; iconName?: string }) => {
-      const cat = await categoryApi.create(d.name, d.iconName || undefined);
+    mutationFn: async (d: { name: string }) => {
+      const cat = await categoryApi.create(d.name);
       if (imageFile) await categoryApi.uploadImage(cat.id, imageFile);
       return cat;
     },
@@ -65,16 +71,35 @@ export default function AdminCategories() {
   const handleCreateImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    setCropTarget('create');
+    setCropFileName(file.name);
+    setCropSrc(URL.createObjectURL(file));
     e.target.value = '';
   };
 
   const handleRowImage = (catId: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    uploadMutation.mutate({ id: catId, file });
+    setCropTarget(catId);
+    setCropFileName(file.name);
+    setCropSrc(URL.createObjectURL(file));
     e.target.value = '';
+  };
+
+  const handleCropClose = () => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropTarget(null);
+    setCropSrc(null);
+  };
+
+  const handleCropped = (file: File) => {
+    if (cropTarget === 'create') {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    } else if (typeof cropTarget === 'number') {
+      uploadMutation.mutate({ id: cropTarget, file });
+    }
+    handleCropClose();
   };
 
   return (
@@ -93,7 +118,6 @@ export default function AdminCategories() {
           <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>Nouvelle catégorie</Typography>
           <Box component="form" onSubmit={handleSubmit((d) => createMutation.mutate(d))} sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
             <TextField label="Nom" size="small" {...register('name')} required />
-            <TextField label="Icône (optionnel)" size="small" {...register('iconName')} />
 
             {/* Image picker for new category */}
             <input ref={createFileRef} type="file" accept="image/*" hidden onChange={handleCreateImage} />
@@ -177,6 +201,15 @@ export default function AdminCategories() {
           </Paper>
         ))}
       </Box>
+
+      <ImageCropDialog
+        open={cropTarget !== null}
+        imageSrc={cropSrc}
+        fileName={cropFileName}
+        aspect={1}
+        onClose={handleCropClose}
+        onCropped={handleCropped}
+      />
     </Box>
   );
 }

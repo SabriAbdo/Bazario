@@ -13,6 +13,8 @@ const ar: any = {
     light_mode: 'الوضع الفاتح',
     seller: 'بائع',
     admin: 'مسؤول',
+    notifications: 'الإشعارات',
+    no_notifications: 'لا توجد إشعارات بعد',
   },
   home: {
     tagline: 'كل ما تحتاجه في مكان واحد',

@@ -29,6 +29,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public OrderDto.Response placeDemandeInfo(OrderDto.DemandeInfoRequest req) {
@@ -41,7 +42,9 @@ public class OrderService {
                 .status(Order.OrderStatus.EN_ATTENTE)
                 .build();
         addHistoryEntry(order, Order.OrderStatus.EN_ATTENTE, null);
-        return toDto(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+        notificationService.notifyNewOrder(saved);
+        return toDto(saved);
     }
 
     @Transactional
@@ -79,7 +82,9 @@ public class OrderService {
         }
 
         addHistoryEntry(order, Order.OrderStatus.EN_ATTENTE, null);
-        return toDto(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+        notificationService.notifyNewOrder(saved);
+        return toDto(saved);
     }
 
     public Page<OrderDto.Response> getOrdersPaged(Order.OrderStatus status, String q, int page, int size, String sortField, String sortDir) {

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 /**
  * DTOs for Admin operations (user management, activity logs).
  */
@@ -45,5 +47,53 @@ public class AdminDto {
 
     public record SetAllowedCategoriesRequest(
             String allowedCategories
+    ) {}
+
+    public record TimeSeriesPoint(
+            String date,
+            long orders,
+            java.math.BigDecimal revenue
+    ) {}
+
+    public record StatusCount(
+            String status,
+            long count
+    ) {}
+
+    public record RoleCount(
+            String role,
+            long count
+    ) {}
+
+    public record TopProduct(
+            Long productId,
+            String label,
+            long quantitySold,
+            java.math.BigDecimal revenue
+    ) {}
+
+    public record TopCategory(
+            String label,
+            java.math.BigDecimal revenue,
+            long quantitySold
+    ) {}
+
+    public record MonthlyPoint(
+            String month,
+            long count
+    ) {}
+
+    public record AdvancedStatsResponse(
+            List<TimeSeriesPoint> revenueSeries,
+            List<StatusCount> ordersByStatus,
+            List<RoleCount> usersByRole,
+            List<TopProduct> topProducts,
+            List<TopCategory> topCategories,
+            List<MonthlyPoint> userGrowth,
+            long ordersLast7Days,
+            long ordersLast30Days,
+            java.math.BigDecimal revenueLast30Days,
+            java.math.BigDecimal avgOrderValue,
+            double approvalRate
     ) {}
 }

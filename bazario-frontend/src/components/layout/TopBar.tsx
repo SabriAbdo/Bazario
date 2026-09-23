@@ -15,6 +15,7 @@ import { useCartStore } from '@/store/useCartStore';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function TopBar() {
   const navigate = useNavigate();
@@ -86,6 +87,9 @@ export default function TopBar() {
 
         {/* Language switcher */}
         <LanguageSwitcher />
+
+        {/* Notifications */}
+        {isAuthenticated && <NotificationBell />}
 
         {/* Cart */}
         {isAuthenticated && (

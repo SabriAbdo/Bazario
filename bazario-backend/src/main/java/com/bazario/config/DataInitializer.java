@@ -28,18 +28,18 @@ public class DataInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         // ── Categories ─────────────────────────────────────────────────────────
-        seedCategory("DISJONCTEUR", "Disjoncteurs",          "ElectricalServices");
-        seedCategory("CABLE",       "Câbles & Fils",          "Cable");
-        seedCategory("PRISE",       "Prises & Interrupteurs", "Power");
-        seedCategory("TABLEAU",     "Tableaux & Coffrets",    "Dashboard");
-        seedCategory("ECLAIRAGE",   "Éclairage",               "Lightbulb");
-        seedCategory("TRANSFO",     "Transformateurs",        "ElectricMeter");
-        seedCategory("MOTEUR",      "Moteurs & Variateurs",   "SettingsInputComponent");
-        seedCategory("SOLAIRE",     "Énergie Solaire",         "WbSunny");
-        seedCategory("DOMOTIQUE",   "Domotique & Smart Home", "Router");
-        seedCategory("OUTILLAGE",   "Outillage Électrique",    "Handyman");
-        seedCategory("SECURITE",    "Sécurité & Alarme",       "Shield");
-        seedCategory("AUTRE",       "Autre",                   "Category");
+        seedCategory("DISJONCTEUR", "Disjoncteurs");
+        seedCategory("CABLE",       "Câbles & Fils");
+        seedCategory("PRISE",       "Prises & Interrupteurs");
+        seedCategory("TABLEAU",     "Tableaux & Coffrets");
+        seedCategory("ECLAIRAGE",   "Éclairage");
+        seedCategory("TRANSFO",     "Transformateurs");
+        seedCategory("MOTEUR",      "Moteurs & Variateurs");
+        seedCategory("SOLAIRE",     "Énergie Solaire");
+        seedCategory("DOMOTIQUE",   "Domotique & Smart Home");
+        seedCategory("OUTILLAGE",   "Outillage Électrique");
+        seedCategory("SECURITE",    "Sécurité & Alarme");
+        seedCategory("AUTRE",       "Autre");
 
         // --- Users ---
         User admin;
@@ -316,9 +316,9 @@ public class DataInitializer implements ApplicationRunner {
         System.out.println("[DataInitializer] Seeded " + products.size() + " products across 11 categories.");
     }
 
-    private void seedCategory(String slug, String label, String icon) {
+    private void seedCategory(String slug, String label) {
         if (!categorieRepository.existsBySlug(slug)) {
-            categorieRepository.save(Category.builder().slug(slug).label(label).icon(icon).build());
+            categorieRepository.save(Category.builder().slug(slug).label(label).build());
         }
     }
 

@@ -31,4 +31,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByDeletedFalseAndActiveFalse();
 
     long countByDeletedFalse();
+
+    long countByDeletedFalseAndRole(User.Role role);
 }

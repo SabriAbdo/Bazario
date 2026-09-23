@@ -18,9 +18,6 @@ public class Category {
     @Column(nullable = false, length = 100)
     private String label;
 
-    @Column(length = 50)
-    private String icon;
-
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 }

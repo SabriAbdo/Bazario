@@ -7,11 +7,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    List<Order> findByCreatedAtAfter(LocalDateTime since);
+
+    long countByType(Order.OrderType type);
 
     Page<Order> findByStatus(Order.OrderStatus status, Pageable pageable);
 

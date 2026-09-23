@@ -33,9 +33,9 @@ export const wishlistApi = {
 
 export const categoryApi = {
   getAll: () => axiosClient.get<Category[]>('/categories').then((r) => r.data),
-  create: (label: string, icon?: string) =>
-    axiosClient.post<Category>('/categories', { label, icon }).then((r) => r.data),
-  update: (id: number, data: { label?: string; icon?: string }) =>
+  create: (label: string) =>
+    axiosClient.post<Category>('/categories', { label }).then((r) => r.data),
+  update: (id: number, data: { label?: string }) =>
     axiosClient.put<Category>(`/categories/${id}`, data).then((r) => r.data),
   uploadImage: (id: number, file: File) => {
     const form = new FormData();

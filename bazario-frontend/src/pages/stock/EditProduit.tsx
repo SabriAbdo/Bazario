@@ -15,6 +15,7 @@ import { productApi } from '../../api/productApi';
 import { categoryApi } from '../../api/miscApi';
 import type { Category } from '../../types';
 import toast from 'react-hot-toast';
+import ImageCropDialog from '@/components/common/ImageCropDialog';
 
 export default function EditProduit() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,10 @@ export default function EditProduit() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Files picked but not yet cropped, processed one at a time
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const { data: product, isLoading, isError } = useQuery({
     queryKey: ['product', id],
@@ -73,9 +78,26 @@ export default function EditProduit() {
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    setPendingFiles((prev) => [...prev, ...files]);
-    setPendingPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+    setCropQueue((prev) => [...prev, ...files]);
+    if (!cropSrc) setCropSrc(URL.createObjectURL(files[0]));
     e.target.value = '';
+  };
+
+  const handleCropClose = () => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropQueue([]);
+    setCropSrc(null);
+  };
+
+  const handleCropped = (file: File) => {
+    setPendingFiles((prev) => [...prev, file]);
+    setPendingPreviews((prev) => [...prev, URL.createObjectURL(file)]);
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropQueue((prev) => {
+      const rest = prev.slice(1);
+      setCropSrc(rest.length ? URL.createObjectURL(rest[0]) : null);
+      return rest;
+    });
   };
 
   const removePending = (idx: number) => {
@@ -300,6 +322,15 @@ export default function EditProduit() {
           </Box>
           <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={handleFilePick} />
         </Box>
+
+        <ImageCropDialog
+          open={cropQueue.length > 0 && cropSrc !== null}
+          imageSrc={cropSrc}
+          fileName={cropQueue[0]?.name ?? 'image.jpg'}
+          aspect={1}
+          onClose={handleCropClose}
+          onCropped={handleCropped}
+        />
 
         <Box sx={{ bgcolor: alpha(form.prixActif ? '#009530' : '#9E9E9E', 0.08), borderRadius: 2, px: 2, py: 1.5,
           border: '1px solid', borderColor: alpha(form.prixActif ? '#009530' : '#9E9E9E', 0.25) }}>

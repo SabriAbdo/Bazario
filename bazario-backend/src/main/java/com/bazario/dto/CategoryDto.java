@@ -6,13 +6,11 @@ import jakarta.validation.constraints.Size;
 public class CategoryDto {
 
     public record CreateRequest(
-            @NotBlank @Size(max = 100) String label,
-            @Size(max = 50)           String icon
+            @NotBlank @Size(max = 100) String label
     ) {}
 
     public record UpdateRequest(
             @Size(max = 100) String label,
-            @Size(max = 50)  String icon,
             @Size(max = 500) String imageUrl
     ) {}
 
@@ -20,7 +18,6 @@ public class CategoryDto {
             Long   id,
             String slug,
             String label,
-            String icon,
             String imageUrl
     ) {}
 }

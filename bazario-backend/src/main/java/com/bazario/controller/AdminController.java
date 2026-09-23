@@ -32,6 +32,11 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getStats());
     }
 
+    @GetMapping("/stats/advanced")
+    public ResponseEntity<AdminDto.AdvancedStatsResponse> advancedStats() {
+        return ResponseEntity.ok(adminService.getAdvancedStats());
+    }
+
     @GetMapping("/users")
     public ResponseEntity<Page<AuthDto.UserDto>> getUsers(
             @RequestParam(required = false) String q,

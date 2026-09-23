@@ -38,7 +38,7 @@ public class CategoryService {
         if (repo.existsBySlug(slug)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Catégorie déjà existante");
         }
-        Category saved = repo.save(Category.builder().slug(slug).label(req.label()).icon(req.icon()).build());
+        Category saved = repo.save(Category.builder().slug(slug).label(req.label()).build());
         return toDto(saved);
     }
 
@@ -46,7 +46,6 @@ public class CategoryService {
         Category cat = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Catégorie introuvable"));
         if (req.label()    != null && !req.label().isBlank()) cat.setLabel(req.label());
-        if (req.icon()     != null) cat.setIcon(req.icon());
         if (req.imageUrl() != null) cat.setImageUrl(req.imageUrl());
         return toDto(repo.save(cat));
     }
@@ -79,7 +78,7 @@ public class CategoryService {
     }
 
     private CategoryDto.Response toDto(Category c) {
-        return new CategoryDto.Response(c.getId(), c.getSlug(), c.getLabel(), c.getIcon(), c.getImageUrl());
+        return new CategoryDto.Response(c.getId(), c.getSlug(), c.getLabel(), c.getImageUrl());
     }
 
     /** Converts a display label to an uppercase slug, e.g. "Câbles & Fils" → "CABLES_FILS" */

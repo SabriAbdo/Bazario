@@ -2,19 +2,19 @@ import { useRef, useState } from 'react';
 import {
   Typography, Box, Paper, Button, TextField, Dialog,
   DialogTitle, DialogContent, DialogActions, IconButton, Tooltip, alpha,
-  Grid, Chip,
+  Grid,
 } from '@mui/material';
 import AddIcon         from '@mui/icons-material/Add';
 import EditIcon        from '@mui/icons-material/Edit';
 import DeleteIcon      from '@mui/icons-material/Delete';
 import CloseIcon       from '@mui/icons-material/Close';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoryApi } from '@/api/miscApi';
 import { Category } from '@/types';
-import { ICON_PALETTE, ICON_REGISTRY, resolveIcon } from '@/utils/iconRegistry';
 import toast from 'react-hot-toast';
+import ImageCropDialog from '@/components/common/ImageCropDialog';
 
 // Empty in dev (Vite proxy) and same-origin prod; set VITE_API_BASE_URL for cross-origin deploys
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -25,39 +25,6 @@ const CAT_COLORS = [
   '#1D4ED8','#B45309','#15803D','#6D28D9','#9D174D',
   '#0F766E','#C2410C','#1E40AF','#166534','#7E22CE',
 ];
-
-// ─── Icon Picker ──────────────────────────────────────────────────────────────
-function IconPicker({ selected, onSelect }: { selected?: string; onSelect: (name: string) => void }) {
-  return (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-      {ICON_PALETTE.map(({ name, label }) => {
-        const Ic = ICON_REGISTRY[name];
-        const isSelected = selected === name;
-        return (
-          <Tooltip key={name} title={label} placement="top" arrow>
-            <Box
-              onClick={() => onSelect(name)}
-              sx={{
-                width: 52, height: 52, borderRadius: 2, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '2px solid', transition: 'all 0.15s',
-                borderColor: isSelected ? 'primary.main' : 'divider',
-                bgcolor: isSelected ? alpha('#1976d2', 0.1) : 'background.paper',
-                '&:hover': { borderColor: 'primary.main', bgcolor: alpha('#1976d2', 0.06) },
-                position: 'relative',
-              }}
-            >
-              <Ic sx={{ fontSize: 24, color: isSelected ? 'primary.main' : 'text.secondary' }} />
-              {isSelected && (
-                <CheckCircleIcon sx={{ fontSize: 14, color: 'primary.main', position: 'absolute', top: 2, right: 2 }} />
-              )}
-            </Box>
-          </Tooltip>
-        );
-      })}
-    </Box>
-  );
-}
 
 // ─── Dialog (create / edit) ───────────────────────────────────────────────────
 function CategoryDialog({
@@ -70,16 +37,19 @@ function CategoryDialog({
   const qc = useQueryClient();
   const isEdit = Boolean(category);
   const [label, setLabel] = useState(category?.label ?? '');
-  const [icon, setIcon]   = useState(category?.icon ?? '');
   const [imageFile, setImageFile]       = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Crop dialog state for the picked (not-yet-uploaded) picture
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropFileName, setCropFileName] = useState('image.jpg');
 
   // Reset when dialog reopens for a different category
   const [lastId, setLastId] = useState<number | undefined>(category?.id);
   if (category?.id !== lastId) {
     setLabel(category?.label ?? '');
-    setIcon(category?.icon ?? '');
     setImageFile(null);
     setImagePreview(null);
     setLastId(category?.id);
@@ -96,13 +66,13 @@ function CategoryDialog({
   };
 
   const createMutation = useMutation({
-    mutationFn: () => categoryApi.create(label.trim(), icon || undefined),
+    mutationFn: () => categoryApi.create(label.trim()),
     onSuccess: (saved) => { afterSave(saved); toast.success('Catégorie créée'); onClose(); },
     onError:   () => toast.error('Erreur lors de la création'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: () => categoryApi.update(category!.id, { label: label.trim() || undefined, icon: icon || undefined }),
+    mutationFn: () => categoryApi.update(category!.id, { label: label.trim() || undefined }),
     onSuccess: (saved) => { afterSave(saved); toast.success('Catégorie mise à jour'); onClose(); },
     onError:   () => toast.error('Erreur lors de la mise à jour'),
   });
@@ -110,9 +80,22 @@ function CategoryDialog({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setCropFileName(file.name);
+    setCropSrc(URL.createObjectURL(file));
+    setCropOpen(true);
+    e.target.value = '';
+  };
+
+  const handleCropClose = () => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropOpen(false);
+    setCropSrc(null);
+  };
+
+  const handleCropped = (file: File) => {
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
-    e.target.value = '';
+    handleCropClose();
   };
 
   const handleSave = () => {
@@ -132,7 +115,7 @@ function CategoryDialog({
       <DialogContent dividers>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
           <TextField
-            label="Nom de la catégorie"
+            label="Nom de la catégorie (libellé)"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             fullWidth size="small"
@@ -142,7 +125,7 @@ function CategoryDialog({
 
           {/* Image upload */}
           <Box>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>Image</Typography>
+            <Typography variant="subtitle2" fontWeight={600} gutterBottom>Photo</Typography>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Tooltip title="Cliquer pour choisir une image">
@@ -165,7 +148,7 @@ function CategoryDialog({
               </Tooltip>
               <Box>
                 <Button size="small" variant="outlined" onClick={() => fileRef.current?.click()}>
-                  {imagePreview || category?.imageUrl ? 'Changer' : 'Ajouter une image'}
+                  {imagePreview || category?.imageUrl ? 'Changer' : 'Ajouter une photo'}
                 </Button>
                 {(imagePreview) && (
                   <Button size="small" color="inherit" sx={{ ml: 1 }} onClick={() => { setImageFile(null); setImagePreview(null); }}>
@@ -174,19 +157,6 @@ function CategoryDialog({
                 )}
               </Box>
             </Box>
-          </Box>
-
-          <Box>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-              Icône
-              {icon && (
-                <Chip
-                  size="small" label={icon} sx={{ ml: 1.5, fontSize: '0.7rem', height: 20 }}
-                  onDelete={() => setIcon('')}
-                />
-              )}
-            </Typography>
-            <IconPicker selected={icon} onSelect={setIcon} />
           </Box>
         </Box>
       </DialogContent>
@@ -197,6 +167,15 @@ function CategoryDialog({
           {isPending ? 'Enregistrement…' : isEdit ? 'Enregistrer' : 'Créer'}
         </Button>
       </DialogActions>
+
+      <ImageCropDialog
+        open={cropOpen}
+        imageSrc={cropSrc}
+        fileName={cropFileName}
+        aspect={1}
+        onClose={handleCropClose}
+        onCropped={handleCropped}
+      />
     </Dialog>
   );
 }
@@ -234,7 +213,7 @@ export default function StockCategories() {
         <Box>
           <Typography variant="h2" fontWeight={700}>Catégories</Typography>
           <Typography color="text.secondary" fontSize="0.9rem">
-            Gérez les catégories de produits et leurs icônes
+            Gérez les catégories de produits et leurs photos
           </Typography>
         </Box>
         <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} sx={{ fontWeight: 600 }}>
@@ -244,7 +223,6 @@ export default function StockCategories() {
 
       <Grid container spacing={2}>
         {categories.map((cat, idx) => {
-          const Icon  = resolveIcon(cat.icon);
           const color = CAT_COLORS[idx % CAT_COLORS.length];
           return (
             <Grid item xs={6} sm={4} md={3} lg={2} key={cat.id}>
@@ -258,7 +236,7 @@ export default function StockCategories() {
                 }}
               >
                 {/* Edit button */}
-                <Tooltip title="Modifier l'icône" placement="top">
+                <Tooltip title="Modifier la catégorie" placement="top">
                   <IconButton
                     size="small"
                     onClick={() => openEdit(cat)}
@@ -291,16 +269,11 @@ export default function StockCategories() {
                 <Box sx={{ width: 88, height: 88, borderRadius: '50%', bgcolor: alpha(color, 0.12), display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
                   {cat.imageUrl
                     ? <Box component="img" src={`${API_BASE}${cat.imageUrl}`} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <Icon sx={{ fontSize: 40, color }} />}
+                    : <ImageNotSupportedIcon sx={{ fontSize: 40, color }} />}
                 </Box>
                 <Typography fontWeight={600} textAlign="center" fontSize="0.78rem" lineHeight={1.3}>
                   {cat.label}
                 </Typography>
-                {cat.icon && (
-                  <Typography variant="caption" color="text.disabled" fontSize="0.62rem" textAlign="center">
-                    {cat.icon}
-                  </Typography>
-                )}
               </Paper>
             </Grid>
           );
