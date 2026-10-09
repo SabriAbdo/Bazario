@@ -112,11 +112,6 @@ public class AdminController {
     @GetMapping("/activite")
     public ResponseEntity<List<AdminDto.ActivityLogResponse>> getActivityLogs() {
         return ResponseEntity.ok(adminService.getActivityLogs());
-
-    @GetMapping("/health")
-    public ResponseEntity<AdminDto.HealthResponse> getHealth() {
-        return ResponseEntity.ok(healthService.checkHealth());
-    }
     }
 }
 
