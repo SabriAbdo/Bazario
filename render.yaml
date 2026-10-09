@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: bazario-backend
+    runtime: docker
+    rootDir: bazario-backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
