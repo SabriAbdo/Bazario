@@ -41,8 +41,9 @@ export interface Review {
 export interface User {
   id: number;
   username: string;
+  email?: string | null;
   fullName: string;
-  role: 'ADMIN' | 'OPERATEUR' | 'STOCK_OPERATEUR';
+  role: 'ADMIN' | 'OPERATEUR' | 'STOCK_OPERATEUR' | 'CLIENT';
   active: boolean;
   allowedCategories?: string | null;
 }
@@ -64,6 +65,7 @@ export interface Category {
   slug: string;
   label: string;
   imageUrl?: string;
+  description?: string | null;
 }
 
 export interface Product {
@@ -85,6 +87,10 @@ export interface Product {
   deleted?: boolean;
   variants?: ProductVariant[];
   approvedByAdmin?: boolean;
+  likesCount?: number;
+  featuredBestSeller?: boolean;
+  featuredNewArrival?: boolean;
+  featuredPopular?: boolean;
 }
 
 export type CommandStatus = 'EN_ATTENTE' | 'CONFIRMEE' | 'EN_PREPARATION' | 'EXPEDIEE' | 'EN_ROUTE' | 'LIVREE' | 'RETOURNEE' | 'VALIDEE' | 'REFUSEE' | 'ANNULEE';
@@ -173,6 +179,13 @@ export interface MonthlyPoint {
   count: number;
 }
 
+export interface TopCustomerStat {
+  customerId: number;
+  name: string;
+  orderCount: number;
+  totalSpent: number;
+}
+
 export interface AdvancedAdminStats {
   revenueSeries: RevenuePoint[];
   ordersByStatus: StatusCount[];
@@ -180,11 +193,16 @@ export interface AdvancedAdminStats {
   topProducts: TopProductStat[];
   topCategories: TopCategoryStat[];
   userGrowth: MonthlyPoint[];
+  topCustomers: TopCustomerStat[];
   ordersLast7Days: number;
   ordersLast30Days: number;
   revenueLast30Days: number;
   avgOrderValue: number;
   approvalRate: number;
+  totalRevenueAllTime: number;
+  avgItemsPerOrder: number;
+  lowStockVariants: number;
+  activeSellers: number;
 }
 
 // ─── Cart (client-side only) ─────────────────────────────────────────────────

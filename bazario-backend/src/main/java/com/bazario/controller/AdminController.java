@@ -65,7 +65,7 @@ public class AdminController {
             @PathVariable Long id,
             @RequestParam String role) {
         User.Role parsed = User.Role.valueOf(role.toUpperCase());
-        return ResponseEntity.ok(adminService.updateUser(id, new AdminDto.UpdateUserRequest(null, parsed, null)));
+        return ResponseEntity.ok(adminService.updateUser(id, new AdminDto.UpdateUserRequest(null, null, null, null, parsed, null)));
     }
 
     @DeleteMapping("/users/{id}")

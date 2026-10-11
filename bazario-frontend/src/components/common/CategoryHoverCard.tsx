@@ -25,7 +25,7 @@ const CategoryTooltip = styled(({ className, ...props }: React.ComponentProps<ty
 interface Props {
   label: string;
   imageUrl?: string;
-  description?: string;
+  description?: string | null;
   children: ReactElement;
 }
 

@@ -30,7 +30,7 @@ export interface CategoryDisplay {
   /** The category's picture, or a generic placeholder when it has none set. */
   icon: ReactNode;
   color: string;
-  description?: string;
+  description?: string | null;
   imageUrl?: string;
 }
 

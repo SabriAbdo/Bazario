@@ -16,10 +16,14 @@ public class AdminDto {
             @NotBlank @Size(max = 100) String username,
             @NotBlank @Size(min = 6, max = 100) String password,
             @NotBlank String fullName,
-            @NotNull User.Role role
+            @NotNull User.Role role,
+            String email
     ) {}
 
     public record UpdateUserRequest(
+            String username,
+            String email,
+            String password,
             String fullName,
             User.Role role,
             Boolean active
@@ -83,6 +87,13 @@ public class AdminDto {
             long count
     ) {}
 
+    public record TopCustomer(
+            Long customerId,
+            String name,
+            long orderCount,
+            java.math.BigDecimal totalSpent
+    ) {}
+
     public record AdvancedStatsResponse(
             List<TimeSeriesPoint> revenueSeries,
             List<StatusCount> ordersByStatus,
@@ -90,10 +101,15 @@ public class AdminDto {
             List<TopProduct> topProducts,
             List<TopCategory> topCategories,
             List<MonthlyPoint> userGrowth,
+            List<TopCustomer> topCustomers,
             long ordersLast7Days,
             long ordersLast30Days,
             java.math.BigDecimal revenueLast30Days,
             java.math.BigDecimal avgOrderValue,
-            double approvalRate
+            double approvalRate,
+            java.math.BigDecimal totalRevenueAllTime,
+            double avgItemsPerOrder,
+            long lowStockVariants,
+            long activeSellers
     ) {}
 }
