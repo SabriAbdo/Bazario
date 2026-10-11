@@ -30,6 +30,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final ActivityLogService activityLogService;
 
     @Transactional
     public OrderDto.Response placeDemandeInfo(OrderDto.DemandeInfoRequest req) {
@@ -48,7 +49,7 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderDto.Response placeOrder(OrderDto.PlaceRequest req) {
+    public OrderDto.Response placeOrder(OrderDto.PlaceRequest req, String username) {
         Order order = Order.builder()
                 .nom(req.nom())
                 .prenom(req.prenom())
@@ -57,6 +58,10 @@ public class OrderService {
                 .email(req.email())
                 .status(Order.OrderStatus.EN_ATTENTE)
                 .build();
+
+        if (username != null) {
+            userRepository.findByUsername(username).ifPresent(order::setCustomer);
+        }
 
         for (OrderDto.ItemRequest itemReq : req.items()) {
             Product product = productRepository.findById(itemReq.productId())
@@ -158,6 +163,12 @@ public class OrderService {
                 .map(this::toDto).toList();
     }
 
+    /** Client — own commandes only, most recent first */
+    public Page<OrderDto.Response> getMyOrdersPaged(String username, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return orderRepository.findByCustomer_UsernameOrderByCreatedAtDesc(username, pageable).map(this::toDto);
+    }
+
     public List<OrderDto.Response> getOrdersByStatus(Order.OrderStatus status) {
         return orderRepository.findByStatus(status, PageRequest.of(0, 1000, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .getContent().stream().map(this::toDto).toList();
@@ -168,6 +179,16 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable")));
     }
 
+    /** Client — may only view their own commande */
+    public OrderDto.Response getByIdForCustomer(Long id, String username) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable"));
+        if (order.getCustomer() == null || !order.getCustomer().getUsername().equals(username)) {
+            throw new org.springframework.security.access.AccessDeniedException("Accès refusé");
+        }
+        return toDto(order);
+    }
+
     @Transactional
     public OrderDto.Response updateStatus(Long id, Order.OrderStatus status, String username) {
         Order order = orderRepository.findById(id)
@@ -176,10 +197,15 @@ public class OrderService {
         User operateur = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
 
+        Order.OrderStatus previousStatus = order.getStatus();
         order.setStatus(status);
         order.setTreatedBy(operateur);
         addHistoryEntry(order, status, operateur.getFullName());
-        return toDto(orderRepository.save(order));
+        OrderDto.Response dto = toDto(orderRepository.save(order));
+        activityLogService.log("Changement statut commande",
+                "Commande #" + order.getId() + " (" + order.getNom() + " " + order.getPrenom() + "): "
+                        + previousStatus + " -> " + status);
+        return dto;
     }
 
     private void addHistoryEntry(Order order, Order.OrderStatus status, String changedBy) {

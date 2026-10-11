@@ -97,4 +97,3 @@ public class AdminDto {
             double approvalRate
     ) {}
 }
-

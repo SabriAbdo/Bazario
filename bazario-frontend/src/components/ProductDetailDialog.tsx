@@ -9,6 +9,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -31,8 +32,9 @@ function CommentSection({ productId }: { productId: number }) {
   const qc = useQueryClient();
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN';
+  const canComment = user?.role === 'CLIENT' || isAdmin;
 
-  const [name, setName] = useState(isAdmin ? (user?.fullName ?? user?.username ?? 'Admin') : '');
+  const name = user?.fullName ?? user?.username ?? '';
   const [content, setContent] = useState('');
 
   const { data: comments = [], isLoading } = useQuery<ProductComment[]>({
@@ -68,30 +70,30 @@ function CommentSection({ productId }: { productId: number }) {
         Commentaires {comments.length > 0 && <Typography component="span" variant="body2" color="text.secondary">({comments.length})</Typography>}
       </Typography>
 
-      {/* Form */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 3 }}>
-        {!isAdmin && (
-          <TextField
-            size="small" label="Votre nom" value={name} onChange={(e) => setName(e.target.value)}
-            inputProps={{ maxLength: 100 }} sx={{ maxWidth: 300 }}
-          />
-        )}
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-          <TextField
-            size="small" multiline minRows={2} fullWidth
-            label="Laisser un commentaire…"
-            value={content} onChange={(e) => setContent(e.target.value)}
-            inputProps={{ maxLength: 1000 }}
-          />
-          <Button
-            variant="contained" disabled={!canSubmit || addMutation.isPending}
-            onClick={() => addMutation.mutate()}
-            sx={{ flexShrink: 0, mt: 0.5, minWidth: 40, px: 1.5, py: 1.1 }}
-          >
-            {addMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <SendIcon fontSize="small" />}
-          </Button>
+      {/* Form — only clients and admins can leave a comment */}
+      {canComment ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+            <TextField
+              size="small" multiline minRows={2} fullWidth
+              label="Laisser un commentaire…"
+              value={content} onChange={(e) => setContent(e.target.value)}
+              inputProps={{ maxLength: 1000 }}
+            />
+            <Button
+              variant="contained" disabled={!canSubmit || addMutation.isPending}
+              onClick={() => addMutation.mutate()}
+              sx={{ flexShrink: 0, mt: 0.5, minWidth: 40, px: 1.5, py: 1.1 }}
+            >
+              {addMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <SendIcon fontSize="small" />}
+            </Button>
+          </Box>
         </Box>
-      </Box>
+      ) : (
+        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 3 }}>
+          Connectez-vous avec un compte client pour laisser un commentaire.
+        </Typography>
+      )}
 
       {/* List */}
       {isLoading ? (
@@ -174,6 +176,18 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
     setImgIdx(0); setQty(product.quantiteMin ?? 1); setIsZoomed(false); setSelectedVariants({});
   }, [product.id]);
 
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) return;
+      if (e.key === 'ArrowLeft') setImgIdx((i) => (i - 1 + images.length) % images.length);
+      else if (e.key === 'ArrowRight') setImgIdx((i) => (i + 1) % images.length);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [images.length]);
+
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth
       PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden', maxHeight: '95vh' } }}>
@@ -225,14 +239,21 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
                 {/* Zoom overlay */}
                 <Box
                   onMouseMove={(e) => {
+                    if (!isZoomed) return;
                     const rect = e.currentTarget.getBoundingClientRect();
                     setZoomOrigin({
                       x: ((e.clientX - rect.left) / rect.width) * 100,
                       y: ((e.clientY - rect.top) / rect.height) * 100,
                     });
                   }}
-                  onMouseLeave={() => { if (!isZoomed) setZoomOrigin({ x: 50, y: 50 }); }}
-                  onClick={() => setIsZoomed((z) => !z)}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setZoomOrigin({
+                      x: ((e.clientX - rect.left) / rect.width) * 100,
+                      y: ((e.clientY - rect.top) / rect.height) * 100,
+                    });
+                    setIsZoomed((z) => !z);
+                  }}
                   sx={{
                     position: 'absolute', inset: 0, zIndex: 1,
                     cursor: isZoomed ? 'zoom-out' : 'zoom-in',
@@ -250,6 +271,21 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
                     </Box>
                   )}
                 </Box>
+                {/* Persistent zoom toggle button */}
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setIsZoomed((z) => !z);
+                    if (isZoomed) setZoomOrigin({ x: 50, y: 50 });
+                  }}
+                  sx={{
+                    position: 'absolute', bottom: 6, right: 6, zIndex: 2,
+                    bgcolor: '#fff', border: '1px solid', borderColor: 'divider', boxShadow: 2,
+                    '&:hover': { bgcolor: '#f5f5f5' },
+                  }}
+                >
+                  {isZoomed ? <ZoomOutIcon sx={{ fontSize: 17 }} /> : <ZoomInIcon sx={{ fontSize: 17 }} />}
+                </IconButton>
                 {images.length > 1 && (
                   <>
                     <IconButton size="small"

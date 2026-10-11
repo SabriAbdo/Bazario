@@ -15,9 +15,8 @@ import { categoryApi } from '@/api/miscApi';
 import { Category } from '@/types';
 import toast from 'react-hot-toast';
 import ImageCropDialog from '@/components/common/ImageCropDialog';
-
-// Empty in dev (Vite proxy) and same-origin prod; set VITE_API_BASE_URL for cross-origin deploys
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+import { resolveImageUrl } from '@/utils/categoryDisplay';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 const CAT_COLORS = [
   '#E8521A','#3730A3','#D97706','#16A34A','#DC2626',
@@ -37,6 +36,7 @@ function CategoryDialog({
   const qc = useQueryClient();
   const isEdit = Boolean(category);
   const [label, setLabel] = useState(category?.label ?? '');
+  const [description, setDescription] = useState(category?.description ?? '');
   const [imageFile, setImageFile]       = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -50,6 +50,7 @@ function CategoryDialog({
   const [lastId, setLastId] = useState<number | undefined>(category?.id);
   if (category?.id !== lastId) {
     setLabel(category?.label ?? '');
+    setDescription(category?.description ?? '');
     setImageFile(null);
     setImagePreview(null);
     setLastId(category?.id);
@@ -66,15 +67,15 @@ function CategoryDialog({
   };
 
   const createMutation = useMutation({
-    mutationFn: () => categoryApi.create(label.trim()),
+    mutationFn: () => categoryApi.create(label.trim(), description.trim() || undefined),
     onSuccess: (saved) => { afterSave(saved); toast.success('Catégorie créée'); onClose(); },
-    onError:   () => toast.error('Erreur lors de la création'),
+    onError:   (err) => toast.error(getApiErrorMessage(err, 'Erreur lors de la création')),
   });
 
   const updateMutation = useMutation({
-    mutationFn: () => categoryApi.update(category!.id, { label: label.trim() || undefined }),
+    mutationFn: () => categoryApi.update(category!.id, { label: label.trim() || undefined, description: description.trim() }),
     onSuccess: (saved) => { afterSave(saved); toast.success('Catégorie mise à jour'); onClose(); },
-    onError:   () => toast.error('Erreur lors de la mise à jour'),
+    onError:   (err) => toast.error(getApiErrorMessage(err, 'Erreur lors de la mise à jour')),
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,6 +124,15 @@ function CategoryDialog({
             placeholder="ex: Disjoncteurs"
           />
 
+          <TextField
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            fullWidth size="small"
+            multiline minRows={2}
+            placeholder="Brève description de la catégorie"
+          />
+
           {/* Image upload */}
           <Box>
             <Typography variant="subtitle2" fontWeight={600} gutterBottom>Photo</Typography>
@@ -132,7 +142,7 @@ function CategoryDialog({
                 <Box
                   onClick={() => fileRef.current?.click()}
                   sx={{
-                    width: 80, height: 80, borderRadius: 2, border: '2px dashed',
+                    width: 80, height: 80, borderRadius: '50%', border: '2px dashed',
                     borderColor: imagePreview ? 'primary.main' : 'divider',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', overflow: 'hidden', flexShrink: 0,
@@ -140,9 +150,9 @@ function CategoryDialog({
                   }}
                 >
                   {imagePreview
-                    ? <Box component="img" src={imagePreview} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <Box component="img" src={imagePreview} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     : category?.imageUrl
-                      ? <Box component="img" src={`${API_BASE}${category.imageUrl}`} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <Box component="img" src={resolveImageUrl(category.imageUrl)} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                       : <PhotoCameraIcon color="action" />}
                 </Box>
               </Tooltip>
@@ -173,6 +183,7 @@ function CategoryDialog({
         imageSrc={cropSrc}
         fileName={cropFileName}
         aspect={1}
+        showAvatarPreview
         onClose={handleCropClose}
         onCropped={handleCropped}
       />
@@ -200,7 +211,7 @@ export default function StockCategories() {
       toast.success('Catégorie supprimée');
       setDeleteTarget(undefined);
     },
-    onError: () => toast.error('Erreur lors de la suppression'),
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Erreur lors de la suppression')),
   });
 
   const openCreate = () => { setEditTarget(undefined); setDialogOpen(true); };
@@ -225,23 +236,44 @@ export default function StockCategories() {
         {categories.map((cat, idx) => {
           const color = CAT_COLORS[idx % CAT_COLORS.length];
           return (
-            <Grid item xs={6} sm={4} md={3} lg={2} key={cat.id}>
+            <Grid item xs={12} sm={6} lg={4} key={cat.id}>
               <Paper
                 elevation={0}
                 sx={{
-                  p: 2.5, borderRadius: 3, border: '1.5px solid', borderColor: 'divider',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.2,
+                  p: 2, borderRadius: 3, border: '1.5px solid', borderColor: 'divider',
+                  display: 'flex', alignItems: 'flex-start', gap: 2,
                   position: 'relative', transition: 'box-shadow 0.2s',
                   '&:hover': { boxShadow: `0 4px 16px ${alpha(color, 0.18)}`, borderColor: color },
                 }}
               >
+                <Box sx={{ width: 72, height: 72, borderRadius: '50%', bgcolor: alpha(color, 0.12), display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                  {cat.imageUrl
+                    ? <Box component="img" src={resolveImageUrl(cat.imageUrl)} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    : <ImageNotSupportedIcon sx={{ fontSize: 32, color }} />}
+                </Box>
+
+                <Box sx={{ flex: 1, minWidth: 0, pr: 7 }}>
+                  <Typography fontWeight={700} fontSize="0.92rem" lineHeight={1.3} noWrap title={cat.label}>
+                    {cat.label}
+                  </Typography>
+                  <Typography
+                    color={cat.description ? 'text.secondary' : 'text.disabled'}
+                    fontSize="0.78rem" lineHeight={1.4} fontStyle={cat.description ? 'normal' : 'italic'}
+                    sx={{
+                      mt: 0.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}
+                  >
+                    {cat.description || 'Aucune description'}
+                  </Typography>
+                </Box>
+
                 {/* Edit button */}
                 <Tooltip title="Modifier la catégorie" placement="top">
                   <IconButton
                     size="small"
                     onClick={() => openEdit(cat)}
                     sx={{
-                      position: 'absolute', top: 6, right: 34,
+                      position: 'absolute', top: 8, right: 36,
                       opacity: 0, transition: 'opacity 0.15s',
                       '.MuiPaper-root:hover &': { opacity: 1 },
                     }}
@@ -257,7 +289,7 @@ export default function StockCategories() {
                     color="error"
                     onClick={() => setDeleteTarget(cat)}
                     sx={{
-                      position: 'absolute', top: 6, right: 6,
+                      position: 'absolute', top: 8, right: 8,
                       opacity: 0, transition: 'opacity 0.15s',
                       '.MuiPaper-root:hover &': { opacity: 1 },
                     }}
@@ -265,15 +297,6 @@ export default function StockCategories() {
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-
-                <Box sx={{ width: 88, height: 88, borderRadius: '50%', bgcolor: alpha(color, 0.12), display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                  {cat.imageUrl
-                    ? <Box component="img" src={`${API_BASE}${cat.imageUrl}`} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <ImageNotSupportedIcon sx={{ fontSize: 40, color }} />}
-                </Box>
-                <Typography fontWeight={600} textAlign="center" fontSize="0.78rem" lineHeight={1.3}>
-                  {cat.label}
-                </Typography>
               </Paper>
             </Grid>
           );

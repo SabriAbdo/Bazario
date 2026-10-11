@@ -44,12 +44,26 @@ export const productApi = {
   getBestSellers: (limit = 10) =>
     axiosClient.get<Product[]>('/products/best-sellers', { params: { limit } }).then((r) => r.data),
 
+  /** Newest products, admin-curated picks shown first */
+  getNewArrivals: (limit = 10) =>
+    axiosClient.get<Product[]>('/products/new-arrivals', { params: { limit } }).then((r) => r.data),
+
+  /** Popular products, admin-curated picks shown first */
+  getPopular: (limit = 10) =>
+    axiosClient.get<Product[]>('/products/popular', { params: { limit } }).then((r) => r.data),
+
   /** Quick search returning Product[] */
   search: (q: string) =>
     axiosClient.get<PagedResponse<Product>>('/products', { params: { q, page: 0, size: 10 } })
       .then((r) => r.data.content),
   getById: (id: number) =>
     axiosClient.get<Product>(`/products/${id}`).then((r) => r.data),
+  like: (id: number) =>
+    axiosClient.post<{ likesCount: number }>(`/products/${id}/like`).then((r) => r.data),
+  unlike: (id: number) =>
+    axiosClient.delete<{ likesCount: number }>(`/products/${id}/like`).then((r) => r.data),
+  getMyLikes: () =>
+    axiosClient.get<number[]>('/products/likes/mine').then((r) => r.data),
   create: (data: CreateProductRequest) =>
     axiosClient.post<Product>('/products', data).then((r) => r.data),
   update: (id: number, data: Partial<CreateProductRequest>) =>

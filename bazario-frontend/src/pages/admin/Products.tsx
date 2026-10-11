@@ -13,6 +13,12 @@ import PendingActionsIcon from '@mui/icons-material/PendingActions';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import FiberNewIcon from '@mui/icons-material/FiberNew';
+import FiberNewOutlinedIcon from '@mui/icons-material/FiberNewOutlined';
+import WhatshotIcon from '@mui/icons-material/Whatshot';
+import WhatshotOutlinedIcon from '@mui/icons-material/WhatshotOutlined';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '@/api/productApi';
 import { categoryApi } from '@/api/miscApi';
@@ -56,7 +62,7 @@ function ProductDetailDialog({ product, categories, onClose }: { product: Produc
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2.5 }}>
             {product.images.map((img, i) => (
               <Box key={i} component="img" src={img} alt=""
-                sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 2, border: '1px solid', borderColor: 'divider' }} />
+                sx={{ width: 120, height: 120, objectFit: 'contain', bgcolor: 'grey.100', borderRadius: 2, border: '1px solid', borderColor: 'divider' }} />
             ))}
           </Box>
         ) : (
@@ -152,6 +158,18 @@ export default function AdminProducts() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => productApi.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin', 'products'] }); toast.success('Produit supprimé'); },
+  });
+  const bestSellerMutation = useMutation({
+    mutationFn: ({ id, value }: { id: number; value: boolean }) => adminApi.setFeaturedBestSeller(id, value),
+    onSuccess: (_, { value }) => { qc.invalidateQueries({ queryKey: ['admin', 'products'] }); toast.success(value ? 'Ajouté aux meilleures ventes' : 'Retiré des meilleures ventes'); },
+  });
+  const newArrivalMutation = useMutation({
+    mutationFn: ({ id, value }: { id: number; value: boolean }) => adminApi.setFeaturedNewArrival(id, value),
+    onSuccess: (_, { value }) => { qc.invalidateQueries({ queryKey: ['admin', 'products'] }); toast.success(value ? 'Ajouté aux nouvelles arrivées' : 'Retiré des nouvelles arrivées'); },
+  });
+  const popularMutation = useMutation({
+    mutationFn: ({ id, value }: { id: number; value: boolean }) => adminApi.setFeaturedPopular(id, value),
+    onSuccess: (_, { value }) => { qc.invalidateQueries({ queryKey: ['admin', 'products'] }); toast.success(value ? 'Ajouté aux produits populaires' : 'Retiré des produits populaires'); },
   });
 
   const displayData = filterApproval === 'pending' ? pendingData : data;
@@ -269,6 +287,24 @@ export default function AdminProducts() {
                     <Tooltip title="Supprimer">
                       <IconButton size="small" color="error" onClick={() => deleteMutation.mutate(p.id)}>
                         <DeleteForeverIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={p.featuredBestSeller ? 'Retirer des meilleures ventes' : 'Ajouter aux meilleures ventes'}>
+                      <IconButton size="small" color="warning"
+                        onClick={() => bestSellerMutation.mutate({ id: p.id, value: !p.featuredBestSeller })}>
+                        {p.featuredBestSeller ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={p.featuredNewArrival ? 'Retirer des nouvelles arrivées' : 'Ajouter aux nouvelles arrivées'}>
+                      <IconButton size="small" color="info"
+                        onClick={() => newArrivalMutation.mutate({ id: p.id, value: !p.featuredNewArrival })}>
+                        {p.featuredNewArrival ? <FiberNewIcon fontSize="small" /> : <FiberNewOutlinedIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={p.featuredPopular ? 'Retirer des produits populaires' : 'Ajouter aux produits populaires'}>
+                      <IconButton size="small" color="secondary"
+                        onClick={() => popularMutation.mutate({ id: p.id, value: !p.featuredPopular })}>
+                        {p.featuredPopular ? <WhatshotIcon fontSize="small" /> : <WhatshotOutlinedIcon fontSize="small" />}
                       </IconButton>
                     </Tooltip>
                   </Box>

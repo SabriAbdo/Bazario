@@ -26,16 +26,16 @@ export const cartApi = {
 };
 
 export const wishlistApi = {
-  getWishlist: () => axiosClient.get('/wishlist').then((r) => r.data),
+  getWishlist: () => axiosClient.get<{ productId: number }[]>('/wishlist').then((r) => r.data),
   add: (productId: number) => axiosClient.post(`/wishlist/${productId}`),
   remove: (productId: number) => axiosClient.delete(`/wishlist/${productId}`),
 };
 
 export const categoryApi = {
   getAll: () => axiosClient.get<Category[]>('/categories').then((r) => r.data),
-  create: (label: string) =>
-    axiosClient.post<Category>('/categories', { label }).then((r) => r.data),
-  update: (id: number, data: { label?: string }) =>
+  create: (label: string, description?: string) =>
+    axiosClient.post<Category>('/categories', { label, description }).then((r) => r.data),
+  update: (id: number, data: { label?: string; description?: string }) =>
     axiosClient.put<Category>(`/categories/${id}`, data).then((r) => r.data),
   uploadImage: (id: number, file: File) => {
     const form = new FormData();

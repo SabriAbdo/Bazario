@@ -1,5 +1,5 @@
 import {
-  Box, Grid, Paper, Typography, Skeleton, Alert, alpha, Button, Stack, Chip,
+  Box, Grid, Paper, Typography, Skeleton, Alert, alpha, Button, Stack, Chip, ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import InventoryIcon from '@mui/icons-material/Inventory';
@@ -14,14 +14,21 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PaidIcon from '@mui/icons-material/Paid';
 import LocalMallIcon from '@mui/icons-material/LocalMall';
 import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import DownloadIcon from '@mui/icons-material/Download';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   PieChart, Pie, Cell, BarChart, Bar, Legend,
 } from 'recharts';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { adminApi } from '../../api/adminApi';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 interface StatCardProps { label: string; value: number | string; icon: React.ReactNode; color: string; onClick?: () => void; badge?: string; }
 
@@ -52,17 +59,29 @@ function StatCard({ label, value, icon, color, onClick, badge }: StatCardProps) 
   );
 }
 
-function ChartCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function ChartCard({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <Paper sx={{ p: 3, height: '100%' }}>
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h6" fontWeight={700}>{title}</Typography>
-        {subtitle && <Typography variant="caption" color="text.secondary">{subtitle}</Typography>}
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+        <Box>
+          <Typography variant="h6" fontWeight={700}>{title}</Typography>
+          {subtitle && <Typography variant="caption" color="text.secondary">{subtitle}</Typography>}
+        </Box>
+        {action}
       </Box>
       {children}
     </Paper>
   );
 }
+
+type Period = 'DAY' | 'WEEK' | 'MONTH';
+
+const PERIOD_LABELS: Record<Period, string> = { DAY: 'Jour', WEEK: 'Semaine', MONTH: 'Mois' };
+const PERIOD_SUBTITLES: Record<Period, string> = {
+  DAY: '30 derniers jours',
+  WEEK: '12 dernières semaines',
+  MONTH: '12 derniers mois',
+};
 
 const STATUS_LABELS: Record<string, string> = {
   EN_ATTENTE: 'En attente',
@@ -106,13 +125,33 @@ const CATEGORY_PALETTE = ['#009530', '#FF6B35', '#1565C0', '#7B1FA2', '#F57C00',
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [isExporting, setIsExporting] = useState(false);
+  const [period, setPeriod] = useState<Period>('DAY');
   const { data: stats, isLoading, isError } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: adminApi.getStats,
   });
   const { data: advanced, isLoading: isLoadingAdvanced } = useQuery({
-    queryKey: ['admin-stats-advanced'],
-    queryFn: adminApi.getAdvancedStats,
+    queryKey: ['admin-stats-advanced', period],
+    queryFn: () => adminApi.getAdvancedStats(period),
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: adminApi.exportExcel,
+    onMutate: () => setIsExporting(true),
+    onSuccess: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `bazario-rapport-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Rapport Excel téléchargé.');
+    },
+    onError: () => toast.error("Échec du téléchargement du rapport."),
+    onSettled: () => setIsExporting(false),
   });
 
   if (isLoading) return (
@@ -164,17 +203,29 @@ export default function AdminDashboard() {
             <Typography variant="body2" color="text.secondary">Vue d'ensemble de l'activité</Typography>
           </Box>
         </Box>
-        {stats.pendingApprovalProducts > 0 && (
+        <Stack direction="row" gap={1.5} alignItems="center">
           <Button
-            variant="contained"
-            color="warning"
-            startIcon={<PendingActionsIcon />}
-            onClick={() => navigate('/admin/produits')}
+            variant="outlined"
+            color="primary"
+            startIcon={<DownloadIcon />}
+            onClick={() => exportMutation.mutate()}
+            disabled={isExporting}
             sx={{ fontWeight: 700 }}
           >
-            {stats.pendingApprovalProducts} produit{stats.pendingApprovalProducts > 1 ? 's' : ''} en attente
+            {isExporting ? 'Génération…' : 'Télécharger Excel'}
           </Button>
-        )}
+          {stats.pendingApprovalProducts > 0 && (
+            <Button
+              variant="contained"
+              color="warning"
+              startIcon={<PendingActionsIcon />}
+              onClick={() => navigate('/admin/produits')}
+              sx={{ fontWeight: 700 }}
+            >
+              {stats.pendingApprovalProducts} produit{stats.pendingApprovalProducts > 1 ? 's' : ''} en attente
+            </Button>
+          )}
+        </Stack>
       </Box>
 
       <Grid container spacing={3}>
@@ -242,7 +293,28 @@ export default function AdminDashboard() {
               <StatCard label="Revenu (30 derniers jours)" value={formatCurrency(advanced.revenueLast30Days)} icon={<PaidIcon />} color="#009530" />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard label="Taux de validation" value={`${advanced.approvalRate.toFixed(0)}%`} icon={<ThumbUpAltIcon />} color="#1565C0" />
+              <StatCard label="Taux de validation" value={`${(advanced.approvalRate ?? 0).toFixed(0)}%`} icon={<ThumbUpAltIcon />} color="#1565C0" />
+            </Grid>
+          </Grid>
+
+          {/* Deep-dive KPIs */}
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard label="Revenu total (historique)" value={formatCurrency(advanced.totalRevenueAllTime ?? 0)} icon={<AccountBalanceWalletIcon />} color="#0D1E36" />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard label="Articles / commande (moy.)" value={(advanced.avgItemsPerOrder ?? 0).toFixed(1)} icon={<LocalMallIcon />} color="#7B1FA2" />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard label="Vendeurs actifs" value={advanced.activeSellers ?? 0} icon={<StorefrontIcon />} color="#1565C0" />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                label="Variantes en stock critique" value={advanced.lowStockVariants ?? 0}
+                icon={<WarningAmberIcon />} color="#F57C00"
+                onClick={() => navigate('/admin/produits')}
+                badge={(advanced.lowStockVariants ?? 0) > 0 ? 'Stock < 5' : undefined}
+              />
             </Grid>
           </Grid>
 
@@ -250,8 +322,22 @@ export default function AdminDashboard() {
             {/* Revenue & orders trend */}
             <Grid item xs={12} md={8}>
               <ChartCard
-                title="Revenu & commandes (30 derniers jours)"
-                subtitle={`Panier moyen : ${formatCurrency(advanced.avgOrderValue)}`}
+                title="Revenu & commandes"
+                subtitle={`${PERIOD_SUBTITLES[period]} · Panier moyen : ${formatCurrency(advanced.avgOrderValue)}`}
+                action={
+                  <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={period}
+                    onChange={(_, value: Period | null) => value && setPeriod(value)}
+                  >
+                    {(['DAY', 'WEEK', 'MONTH'] as Period[]).map((p) => (
+                      <ToggleButton key={p} value={p} sx={{ textTransform: 'none', fontWeight: 600, px: 1.5 }}>
+                        {PERIOD_LABELS[p]}
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                }
               >
                 <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={advanced.revenueSeries} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
@@ -262,7 +348,7 @@ export default function AdminDashboard() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={alpha('#0D1E36', 0.08)} />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={2} />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={period === 'DAY' ? 2 : 0} />
                     <YAxis yAxisId="left" tick={{ fontSize: 11 }} width={70} tickFormatter={(v) => formatCurrency(v)} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} width={30} allowDecimals={false} />
                     <ReTooltip
@@ -380,7 +466,7 @@ export default function AdminDashboard() {
           </Grid>
 
           {/* User growth */}
-          <Grid container spacing={3}>
+          <Grid container spacing={3} sx={{ mb: 3 }}>
             <Grid item xs={12}>
               <ChartCard title="Croissance des utilisateurs" subtitle="Nouvelles inscriptions par mois (6 derniers mois)">
                 <ResponsiveContainer width="100%" height={220}>
@@ -393,6 +479,37 @@ export default function AdminDashboard() {
                     <Bar dataKey="count" name="Nouveaux utilisateurs" fill="#1565C0" radius={[6, 6, 0, 0]} barSize={32} />
                   </BarChart>
                 </ResponsiveContainer>
+              </ChartCard>
+            </Grid>
+          </Grid>
+
+          {/* Top customers */}
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <ChartCard title="Meilleurs clients" subtitle="Top 5 par montant total dépensé">
+                {(advanced.topCustomers ?? []).length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>Aucune donnée disponible.</Typography>
+                ) : (
+                  <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: alpha('#0D1E36', 0.08) }} />} gap={1.25}>
+                    {(advanced.topCustomers ?? []).map((c, i) => (
+                      <Stack key={c.customerId} direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 0.5 }}>
+                        <Stack direction="row" alignItems="center" gap={1.5}>
+                          <Box sx={{
+                            width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            bgcolor: alpha('#009530', 0.12), color: '#009530', fontWeight: 700, fontSize: '0.8rem',
+                          }}>
+                            {i === 0 ? <EmojiEventsIcon sx={{ fontSize: 18 }} /> : `#${i + 1}`}
+                          </Box>
+                          <Box>
+                            <Typography variant="body2" fontWeight={700}>{c.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">{c.orderCount} commande{c.orderCount > 1 ? 's' : ''}</Typography>
+                          </Box>
+                        </Stack>
+                        <Typography variant="body2" fontWeight={700} color="#009530">{formatCurrency(c.totalSpent)}</Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
               </ChartCard>
             </Grid>
           </Grid>

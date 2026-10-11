@@ -26,10 +26,11 @@ public class CommentController {
     }
 
     /**
-     * Public — visitors and admins can post.
+     * CLIENT and ADMIN only.
      * If the caller is authenticated as ADMIN, the comment is flagged accordingly.
      */
     @PostMapping("/api/v1/products/{productId}/comments")
+    @PreAuthorize("hasAnyRole('CLIENT', 'ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<CommentDto.Response> add(
             @PathVariable Long productId,

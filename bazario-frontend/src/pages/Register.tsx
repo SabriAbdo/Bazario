@@ -1,5 +1,5 @@
-﻿import { Box, Paper, Typography, TextField, Button, Link as MuiLink, Divider, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { useForm, Controller } from 'react-hook-form';
+﻿import { Box, Paper, Typography, TextField, Button, Link as MuiLink, Divider } from '@mui/material';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
@@ -15,30 +15,29 @@ export default function Register() {
 
   const schema = z.object({
     fullName: z.string().min(2, t('auth.full_name') + ' requis'),
+    username: z.string().min(3, 'Identifiant invalide'),
     email: z.string().email('Email invalide'),
     password: z.string().min(6, 'Minimum 6 caracteres'),
     confirmPassword: z.string(),
-    role: z.enum(['BUYER', 'SELLER']),
   }).refine((d) => d.password === d.confirmPassword, {
     message: 'Les mots de passe ne correspondent pas',
     path: ['confirmPassword'],
   });
   type FormData = z.infer<typeof schema>;
 
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { role: 'BUYER' },
   });
 
   const onSubmit = async (data: FormData) => {
     try {
-      const res = await (authApi as any).register({
+      const res = await authApi.register({
         fullName: data.fullName,
+        username: data.username,
         email: data.email,
         password: data.password,
-        role: data.role,
       });
-      setAuth(res.user, res.accessToken);
+      setAuth(res.accessToken, res.user);
       toast.success(t('auth.welcome', { name: res.user.fullName }));
       navigate('/');
     } catch (err: any) {
@@ -62,8 +61,13 @@ export default function Register() {
             helperText={errors.fullName?.message}
           />
           <TextField
+            label={t('auth.username')}
+            {...register('username')}
+            error={!!errors.username}
+            helperText={errors.username?.message}
+          />
+          <TextField
             label={t('auth.email')}
-            type="email"
             {...register('email')}
             error={!!errors.email}
             helperText={errors.email?.message}
@@ -81,19 +85,6 @@ export default function Register() {
             {...register('confirmPassword')}
             error={!!errors.confirmPassword}
             helperText={errors.confirmPassword?.message}
-          />
-          <Controller
-            name="role"
-            control={control}
-            render={({ field }) => (
-              <FormControl>
-                <InputLabel>Je suis</InputLabel>
-                <Select {...field} label="Je suis">
-                  <MenuItem value="BUYER">Acheteur</MenuItem>
-                  <MenuItem value="SELLER">Vendeur</MenuItem>
-                </Select>
-              </FormControl>
-            )}
           />
           <Button type="submit" variant="contained" size="large" disabled={isSubmitting}>
             {isSubmitting ? t('common.loading') : t('auth.register_btn')}

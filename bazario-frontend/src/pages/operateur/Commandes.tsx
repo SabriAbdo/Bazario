@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import {
   Box, Typography, Paper, Table, TableHead, TableBody, TableRow, TableCell,
   Chip, Button, LinearProgress, Alert, Tooltip, ButtonGroup, alpha,
@@ -11,6 +11,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orderApi } from '../../api/orderApi';
 import type { Command, CommandStatus } from '../../types';
@@ -32,6 +33,7 @@ const STATUS_CHIP: Record<CommandStatus, { label: string; color: 'warning' | 'su
 
 export default function OperateurCommandes() {
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedOrder, setSelectedOrder] = useState<Command | null>(null);
   const [pendingAction, setPendingAction] = useState<{ order: Command; status: CommandStatus; label: string } | null>(null);
   const [page, setPage] = useState(0);
@@ -39,6 +41,17 @@ export default function OperateurCommandes() {
   const [sortField, setSortField] = useState('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [search, setSearch] = useState('');
+
+  // Deep-link from a notification click (?orderId=123): open that order's detail directly.
+  useEffect(() => {
+    const orderId = searchParams.get('orderId');
+    if (!orderId) return;
+    orderApi.getById(Number(orderId))
+      .then((order) => setSelectedOrder(order))
+      .catch(() => toast.error("Commande introuvable."));
+    setSearchParams((prev) => { prev.delete('orderId'); return prev; }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleSort = (field: string) => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));

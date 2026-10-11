@@ -32,18 +32,21 @@ import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/api/adminApi';
 import ContactExpertButton from '../ContactExpertButton';
 import LanguageSwitcher from '../LanguageSwitcher';
+import NotificationBell from '../NotificationBell';
 import bazarioLogo from '../../assets/bazario-logo.png';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Admin',
   OPERATEUR: 'Opérateur',
   STOCK_OPERATEUR: 'Stock',
+  CLIENT: 'Client',
 };
 
 const ROLE_COLORS: Record<string, string> = {
   ADMIN: '#E53935',
   OPERATEUR: '#1565C0',
   STOCK_OPERATEUR: '#6A1FAA',
+  CLIENT: '#E8521A',
 };
 
 // Freezes the matched route element on mount so the exiting page keeps rendering its
@@ -59,11 +62,11 @@ const NAV_LINKS = {
     { label: 'Commandes', path: '/operateur/commandes', icon: <AssignmentIcon fontSize="small" /> },
     { label: 'Suivi Commandes', path: '/operateur/suivi-commandes', icon: <LocalShippingIcon fontSize="small" /> },
     { label: 'Historique', path: '/operateur/historique', icon: <HistoryIcon fontSize="small" /> },
-    { label: 'Catalogue', path: '/products', icon: <HomeIcon fontSize="small" /> },
+    { label: 'Boutique', path: '/products', icon: <HomeIcon fontSize="small" /> },
     { label: 'Catégories', path: '/admin/categories', icon: <CategoryIcon fontSize="small" /> },
   ],
   STOCK_OPERATEUR: [
-    { label: 'Catalogue', path: '/', icon: <HomeIcon fontSize="small" /> },
+    { label: 'Boutique', path: '/products', icon: <HomeIcon fontSize="small" /> },
     { label: 'Mes produits', path: '/stock/produits', icon: <InventoryIcon fontSize="small" /> },
     { label: 'Nouveau produit', path: '/stock/produits/nouveau', icon: <AddBoxIcon fontSize="small" /> },
     { label: 'Catégories', path: '/stock/categories', icon: <CategoryIcon fontSize="small" /> },
@@ -78,6 +81,12 @@ const NAV_LINKS = {
     { label: 'Catégories',    path: '/admin/categories',     icon: <CategoryIcon fontSize="small" /> },
     { label: 'Approbations',  path: '/admin/approbations',   icon: <PendingActionsIcon fontSize="small" /> },
     { label: 'Activité',      path: '/admin/activite',       icon: <HistoryIcon fontSize="small" /> },
+  ],
+  CLIENT: [
+    { label: 'Boutique', path: '/products', icon: <HomeIcon fontSize="small" /> },
+    { label: 'Mes commandes', path: '/orders', icon: <AssignmentIcon fontSize="small" /> },
+    { label: 'Liste de souhaits', path: '/wishlist', icon: <InventoryIcon fontSize="small" /> },
+    { label: 'Mon profil', path: '/profile', icon: <PersonIcon fontSize="small" /> },
   ],
 };
 
@@ -207,16 +216,19 @@ export default function MainLayout() {
           {/* Language switcher */}
           <LanguageSwitcher />
 
+          {/* New order/demande-info notifications for operateur staff */}
+          {user?.role === 'OPERATEUR' && <NotificationBell />}
+
           {/* Visitor actions */}
           {!user && (
             <>
               <Button
                 color="inherit"
                 startIcon={<HomeIcon fontSize="small" />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/products')}
                 sx={{ display: { xs: 'none', sm: 'flex' }, color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem' }}
               >
-                Catalogue
+                Boutique
               </Button>
               <Tooltip title="Mon panier">
                 <IconButton onClick={() => navigate('/panier')} sx={{ mx: 0.5, color: 'rgba(255,255,255,0.85)', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' } }}>
@@ -238,6 +250,19 @@ export default function MainLayout() {
                 }}
               >
                 Connexion
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => navigate('/register')}
+                sx={{
+                  ml: 1, borderRadius: 6, px: 2,
+                  color: '#fff', borderColor: 'rgba(255,255,255,0.4)',
+                  display: { xs: 'none', sm: 'inline-flex' },
+                  '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.08)' },
+                }}
+              >
+                Inscription
               </Button>
             </>
           )}
@@ -372,15 +397,15 @@ export default function MainLayout() {
         </Box>
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        <AnimatePresence mode="wait" initial={false}>
+      <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+            initial={{ opacity: 0, scale: 0.99 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.99 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', willChange: 'opacity, transform' }}
           >
             <AnimatedOutlet />
           </motion.div>

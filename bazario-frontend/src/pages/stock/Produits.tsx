@@ -3,6 +3,7 @@ import {
   Box, Typography, Button, Paper, Table, TableHead, TableBody, TableRow, TableCell,
   Chip, IconButton, Tooltip, Alert, alpha, LinearProgress,
   TableSortLabel, TablePagination, TextField, InputAdornment,
+  Dialog, DialogTitle, DialogContent, DialogActions, Divider,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -11,16 +12,128 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import SearchIcon from '@mui/icons-material/Search';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
 import VerifiedIcon from '@mui/icons-material/Verified';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '../../api/productApi';
 import { formatCategoryList } from '../../utils/categoryDisplay';
+import type { Product } from '../../types';
 import toast from 'react-hot-toast';
 import TableSkeleton from '../../components/common/TableSkeleton';
 
 type SortField = 'libelle' | 'prix' | 'createdAt';
 type SortDir = 'asc' | 'desc';
+
+function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  const [zoomed, setZoomed] = useState(false);
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="lg" fullWidth
+      PaperProps={{ sx: { bgcolor: 'rgba(0,0,0,0.92)', boxShadow: 'none', overflow: 'hidden' } }}
+    >
+      <IconButton onClick={onClose} sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', zIndex: 1 }}>
+        <CloseIcon />
+      </IconButton>
+      <Box
+        onClick={() => setZoomed((z) => !z)}
+        sx={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '70vh', overflow: 'auto', cursor: zoomed ? 'zoom-out' : 'zoom-in', p: 2,
+        }}
+      >
+        <Box component="img" src={src} alt=""
+          sx={{
+            maxWidth: zoomed ? 'none' : '100%', maxHeight: zoomed ? 'none' : '80vh',
+            width: zoomed ? '180%' : 'auto', transition: 'width 0.25s ease, max-width 0.25s ease',
+            objectFit: 'contain', borderRadius: 1,
+          }} />
+      </Box>
+    </Dialog>
+  );
+}
+
+function ProductInspectDialog({ product, onClose }: { product: Product; onClose: () => void }) {
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1, flexWrap: 'wrap' }}>
+        <Typography variant="h6" fontWeight={700}>{product.libelle}</Typography>
+        {product.approvedByAdmin
+          ? <Chip label="Approuvé" size="small" color="success" icon={<VerifiedIcon />} />
+          : <Chip label="En attente d'approbation" size="small" color="warning" icon={<PendingActionsIcon />} />}
+        {!product.prixActif && <Chip label="Caché du catalogue" size="small" color="default" />}
+      </DialogTitle>
+      <DialogContent dividers>
+        {product.images?.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2.5 }}>
+            {product.images.map((img, i) => {
+              const src = productApi.imageUrl(img);
+              return (
+                <Box key={i} onClick={() => setLightboxSrc(src)}
+                  sx={{
+                    position: 'relative', width: 120, height: 120, borderRadius: 2, overflow: 'hidden',
+                    bgcolor: 'grey.100', border: '1px solid', borderColor: 'divider', cursor: 'zoom-in',
+                    '&:hover .zoom-hint': { opacity: 1 },
+                  }}
+                >
+                  <Box component="img" src={src} alt=""
+                    sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                  <Box className="zoom-hint" sx={{
+                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    bgcolor: alpha('#000', 0.35), opacity: 0, transition: 'opacity 0.2s ease', color: '#fff',
+                  }}>
+                    <ZoomInIcon />
+                  </Box>
+                </Box>
+              );
+            })}
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5, color: 'text.disabled' }}>
+            <ImageNotSupportedIcon /> <Typography variant="body2">Aucune image</Typography>
+          </Box>
+        )}
+        <Divider sx={{ mb: 2 }} />
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+          <Box><Typography variant="caption" color="text.secondary">Référence</Typography><Typography fontFamily="monospace">{product.reference ?? '—'}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Marque</Typography><Typography>{product.marque ?? '—'}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Catégorie</Typography><Typography>{formatCategoryList(product.categories)}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Unité · Qté min</Typography><Typography>{product.unite} · {product.quantiteMin}</Typography></Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">Prix</Typography>
+            <Typography fontWeight={700} color="primary.main">{product.prix.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD</Typography>
+          </Box>
+          <Box><Typography variant="caption" color="text.secondary">Prix promo</Typography><Typography color="secondary.main">{product.prixPromo ? `${product.prixPromo.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD` : '—'}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Date de création</Typography><Typography>{new Date(product.createdAt).toLocaleString('fr-FR')}</Typography></Box>
+          {product.description && (
+            <Box sx={{ gridColumn: '1 / -1' }}><Typography variant="caption" color="text.secondary">Description</Typography>
+              <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{product.description}</Typography>
+            </Box>
+          )}
+        </Box>
+        {product.variants && product.variants.length > 0 && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom>Variantes ({product.variants.length})</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {product.variants.map((v) => (
+                <Chip key={v.id} label={`${v.valeur} · ${v.stock} en stock`} size="small" variant="outlined" />
+              ))}
+            </Box>
+          </>
+        )}
+      </DialogContent>
+      <DialogActions sx={{ px: 2.5, py: 1.5 }}>
+        <Button onClick={onClose} color="inherit">Fermer</Button>
+      </DialogActions>
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+    </Dialog>
+  );
+}
 
 export default function StockProduits() {
   const navigate = useNavigate();
@@ -31,6 +144,7 @@ export default function StockProduits() {
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [search, setSearch] = useState('');
+  const [inspectedProduct, setInspectedProduct] = useState<Product | null>(null);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -160,10 +274,22 @@ export default function StockProduits() {
                   {new Date(p.createdAt).toLocaleDateString('fr-FR')}
                 </TableCell>
                 <TableCell align="center">
-                  <Tooltip title="Modifier">
-                    <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => navigate(`/stock/produits/${p.id}/edit`)}>
-                      <EditIcon fontSize="small" />
+                  <Tooltip title="Inspecter">
+                    <IconButton size="small" color="primary" onClick={() => setInspectedProduct(p)}>
+                      <VisibilityIcon fontSize="small" />
                     </IconButton>
+                  </Tooltip>
+                  <Tooltip title={p.approvedByAdmin ? 'Produit approuvé : modification réservée aux administrateurs' : 'Modifier'}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        sx={{ color: 'primary.main' }}
+                        disabled={p.approvedByAdmin}
+                        onClick={() => navigate(`/stock/produits/${p.id}/edit`)}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                   <Tooltip title="Supprimer (envoi en corbeille)">
                     <IconButton size="small" color="error" onClick={() => deleteMutation.mutate(p.id)}>
@@ -187,6 +313,8 @@ export default function StockProduits() {
           labelRowsPerPage="Lignes :" labelDisplayedRows={({ from, to, count }) => `${from}–${to} sur ${count}`}
         />
       </Paper>
+
+      {inspectedProduct && <ProductInspectDialog product={inspectedProduct} onClose={() => setInspectedProduct(null)} />}
     </Box>
   );
 }

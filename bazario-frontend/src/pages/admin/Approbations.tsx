@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box, Typography, Grid, Card, CardMedia, CardContent, CardActions,
   Button, Chip, LinearProgress, Alert, alpha, Dialog, DialogTitle,
-  DialogContent, DialogActions, Divider, Pagination,
+  DialogContent, DialogActions, Divider, Pagination, TextField, InputAdornment,
+  FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -12,6 +13,7 @@ import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import PersonIcon from '@mui/icons-material/Person';
 import CategoryIcon from '@mui/icons-material/Category';
 import SellIcon from '@mui/icons-material/Sell';
+import SearchIcon from '@mui/icons-material/Search';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/api/adminApi';
 import type { Product } from '@/types';
@@ -39,7 +41,7 @@ function ProductPreviewDialog({ product, onClose, onApprove, onReject, approving
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2.5 }}>
             {product.images.map((img, i) => (
               <Box key={i} component="img" src={img} alt=""
-                sx={{ width: 130, height: 130, objectFit: 'cover', borderRadius: 2, border: '1px solid', borderColor: 'divider' }} />
+                sx={{ width: 130, height: 130, objectFit: 'contain', bgcolor: 'grey.100', borderRadius: 2, border: '1px solid', borderColor: 'divider' }} />
             ))}
           </Box>
         ) : (
@@ -98,16 +100,36 @@ export default function AdminApprobations() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [preview, setPreview] = useState<Product | null>(null);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin', 'approbations', page],
-    queryFn: () => adminApi.getPendingProducts(page - 1, PAGE_SIZE),
+    queryKey: ['admin', 'approbations'],
+    queryFn: () => adminApi.getPendingProducts(0, 100),
     refetchInterval: 30_000, // auto-refresh every 30s
   });
 
-  const products = data?.content ?? [];
-  const total = data?.totalElements ?? 0;
-  const pageCount = data?.totalPages ?? 1;
+  const allProducts = data?.content ?? [];
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    allProducts.forEach((p) => p.categories?.forEach((c) => set.add(c)));
+    return Array.from(set).sort();
+  }, [allProducts]);
+
+  const filteredProducts = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return allProducts.filter((p) =>
+      (categoryFilter === 'ALL' || p.categories?.includes(categoryFilter)) &&
+      (!term
+        || p.libelle.toLowerCase().includes(term)
+        || (p.createdByName ?? '').toLowerCase().includes(term)
+        || (p.marque ?? '').toLowerCase().includes(term))
+    );
+  }, [allProducts, search, categoryFilter]);
+
+  const total = filteredProducts.length;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const products = filteredProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['admin', 'approbations'] });
@@ -147,25 +169,48 @@ export default function AdminApprobations() {
         <Box>
           <Typography variant="h4" fontWeight={700}>Approbations</Typography>
           <Typography variant="body2" color="text.secondary">
-            {isLoading ? '…' : `${total} produit${total !== 1 ? 's' : ''} en attente de validation`}
+            {isLoading ? '…' : `${allProducts.length} produit${allProducts.length !== 1 ? 's' : ''} en attente de validation`}
           </Typography>
         </Box>
-        {total > 0 && (
-          <Chip label={`${total} en attente`} color="warning" size="small" sx={{ ml: 'auto', fontWeight: 700 }} />
+        {allProducts.length > 0 && (
+          <Chip label={`${allProducts.length} en attente`} color="warning" size="small" sx={{ ml: 'auto', fontWeight: 700 }} />
         )}
+      </Box>
+
+      <Box sx={{ display: 'flex', gap: 2, mb: 1, mt: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        <TextField
+          size="small" placeholder="Rechercher produit, vendeur, marque..." value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          sx={{ maxWidth: 320, flex: 1 }}
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+        />
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Catégorie</InputLabel>
+          <Select value={categoryFilter} label="Catégorie" onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}>
+            <MenuItem value="ALL">Toutes les catégories</MenuItem>
+            {categoryOptions.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+          </Select>
+        </FormControl>
       </Box>
 
       {isLoading && <LinearProgress sx={{ mt: 2, mb: 3, borderRadius: 1 }} color="warning" />}
       {isError && <Alert severity="error" sx={{ mt: 2 }}>Erreur de chargement.</Alert>}
 
       {/* Empty state */}
-      {!isLoading && total === 0 && (
+      {!isLoading && allProducts.length === 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 12, gap: 2 }}>
           <Box sx={{ bgcolor: alpha('#009530', 0.1), borderRadius: '50%', p: 3 }}>
             <TaskAltIcon sx={{ fontSize: 64, color: '#009530' }} />
           </Box>
           <Typography variant="h5" fontWeight={700} color="success.main">Tout est approuvé !</Typography>
           <Typography color="text.secondary">Aucun produit n'attend votre validation pour l'instant.</Typography>
+        </Box>
+      )}
+
+      {/* No match for current filters */}
+      {!isLoading && allProducts.length > 0 && total === 0 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 8, gap: 1.5 }}>
+          <Typography variant="h6" color="text.secondary">Aucun produit ne correspond aux filtres.</Typography>
         </Box>
       )}
 
@@ -194,7 +239,7 @@ export default function AdminApprobations() {
                         image={product.images[0]}
                         alt={product.libelle}
                         onClick={() => setPreview(product)}
-                        sx={{ objectFit: 'cover', cursor: 'pointer', borderRadius: '12px 12px 0 0' }}
+                        sx={{ objectFit: 'contain', bgcolor: 'grey.100', cursor: 'pointer', borderRadius: '12px 12px 0 0' }}
                       />
                     ) : (
                       <Box onClick={() => setPreview(product)} sx={{

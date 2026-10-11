@@ -13,6 +13,10 @@ import type { Category } from '@/types';
 // Empty in dev (Vite proxy) and same-origin prod; set VITE_API_BASE_URL for cross-origin deploys
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
+/** Resolves a category/product image path to a full URL — passes absolute URLs (e.g. Cloudinary) through unchanged. */
+export const resolveImageUrl = (path: string): string =>
+  /^https?:\/\//i.test(path) ? path : `${API_BASE}${path}`;
+
 export const CAT_COLORS = [
   '#E8521A', '#3730A3', '#D97706', '#16A34A', '#DC2626',
   '#7C3AED', '#0369A1', '#BE185D', '#065F46', '#92400E',
@@ -26,6 +30,8 @@ export interface CategoryDisplay {
   /** The category's picture, or a generic placeholder when it has none set. */
   icon: ReactNode;
   color: string;
+  description?: string;
+  imageUrl?: string;
 }
 
 export const ALL_CATEGORY: CategoryDisplay = { key: 'all', label: 'Tous', icon: <GridViewIcon />, color: '#1A237E' };
@@ -39,8 +45,9 @@ const FALLBACK: ReactNode = <ImageNotSupportedIcon />;
 function categoryPicture(cat: Category): ReactNode {
   if (!cat.imageUrl) return FALLBACK;
   return (
-    <Box component="img" src={`${API_BASE}${cat.imageUrl}`} alt={cat.label}
-      sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+    <Box component="img" src={resolveImageUrl(cat.imageUrl)} alt={cat.label}
+      className="category-picture"
+      sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', transition: 'transform 0.2s ease' }} />
   );
 }
 
@@ -48,7 +55,7 @@ function categoryPicture(cat: Category): ReactNode {
 export function buildCategoryDisplays(categories: Category[]): CategoryDisplay[] {
   return categories.map((cat, idx) => {
     const color = CAT_COLORS[idx % CAT_COLORS.length];
-    return { key: cat.slug, label: cat.label, icon: categoryPicture(cat), color };
+    return { key: cat.slug, label: cat.label, icon: categoryPicture(cat), color, description: cat.description, imageUrl: cat.imageUrl };
   });
 }
 

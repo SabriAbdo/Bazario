@@ -1,4 +1,6 @@
 ﻿import axios from 'axios';
+import toast from 'react-hot-toast';
+import i18n from '../i18n';
 import { useAuthStore } from '../store/useAuthStore';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -17,8 +19,10 @@ axiosClient.interceptors.request.use((config) => {
 axiosClient.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 && useAuthStore.getState().token) {
       useAuthStore.getState().clearAuth();
+      // single toast id avoids duplicates when the proactive expiry watcher fires around the same time
+      toast.error(i18n.t('auth.session_expired'), { id: 'session-expired' });
     }
     return Promise.reject(err);
   }

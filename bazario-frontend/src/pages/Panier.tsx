@@ -24,8 +24,8 @@ export default function Panier() {
       <Box sx={{ px: { xs: 2, md: 4 }, py: 6, textAlign: 'center' }}>
         <ShoppingCartIcon sx={{ fontSize: 72, color: 'text.disabled', mb: 2 }} />
         <Typography variant="h5" color="text.secondary" gutterBottom>Votre panier est vide</Typography>
-        <Typography variant="body2" color="text.disabled" mb={3}>Parcourez notre catalogue pour trouver du matériel électrique.</Typography>
-        <Button variant="contained" startIcon={<ArrowBackIcon />} onClick={() => navigate('/')}>Retour au catalogue</Button>
+        <Typography variant="body2" color="text.disabled" mb={3}>Parcourez notre boutique pour trouver du matériel électrique.</Typography>
+        <Button variant="contained" startIcon={<ArrowBackIcon />} onClick={() => navigate('/products')}>Retour à la boutique</Button>
       </Box>
     );
   }

@@ -6,8 +6,6 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
-import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,6 +14,7 @@ import { categoryApi } from '../../api/miscApi';
 import type { Category } from '../../types';
 import toast from 'react-hot-toast';
 import ImageCropDialog from '@/components/common/ImageCropDialog';
+import ImageGalleryPreview from '@/components/common/ImageGalleryPreview';
 
 export default function EditProduit() {
   const { id } = useParams<{ id: string }>();
@@ -143,6 +142,18 @@ export default function EditProduit() {
 
   if (isLoading) return <Box sx={{ p: 4 }}><CircularProgress /></Box>;
   if (isError) return <Alert severity="error" sx={{ m: 4 }}>Produit introuvable.</Alert>;
+  if (product?.approvedByAdmin) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Ce produit a été approuvé par un administrateur et ne peut plus être modifié.
+        </Alert>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/stock/produits')}>
+          Retour aux produits
+        </Button>
+      </Box>
+    );
+  }
 
   const existingImages: string[] = product?.images ?? [];
 
@@ -279,47 +290,20 @@ export default function EditProduit() {
           <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
             Photos du produit <Typography component="span" variant="caption" color="text.secondary">(optionnel)</Typography>
           </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'flex-start' }}>
-            {/* Existing saved images */}
-            {existingImages.map((url) => (
-              <Box key={url} sx={{ position: 'relative', width: 90, height: 90 }}>
-                <Box component="img" src={productApi.imageUrl(url)} alt=""
-                  sx={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 2, border: '2px solid', borderColor: 'primary.main' }} />
-                <Tooltip title="Supprimer">
-                  <IconButton size="small"
-                    onClick={() => deleteImageMutation.mutate(url)}
-                    disabled={deleteImageMutation.isPending}
-                    sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'error.main', color: '#fff', '&:hover': { bgcolor: 'error.dark' }, width: 22, height: 22 }}>
-                    <DeleteIcon sx={{ fontSize: 14 }} />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            ))}
-            {/* Pending new images */}
-            {pendingPreviews.map((src, idx) => (
-              <Box key={idx} sx={{ position: 'relative', width: 90, height: 90 }}>
-                <Box component="img" src={src} alt=""
-                  sx={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 2, border: '2px dashed', borderColor: '#009530', opacity: 0.8 }} />
-                <Tooltip title="Annuler">
-                  <IconButton size="small"
-                    onClick={() => removePending(idx)}
-                    sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'warning.main', color: '#fff', '&:hover': { bgcolor: 'warning.dark' }, width: 22, height: 22 }}>
-                    <DeleteIcon sx={{ fontSize: 14 }} />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            ))}
-            {/* Add button */}
-            <Box
-              onClick={() => fileInputRef.current?.click()}
-              sx={{ width: 90, height: 90, border: '2px dashed', borderColor: alpha('#009530', 0.4), borderRadius: 2,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#009530', gap: 0.3,
-                '&:hover': { bgcolor: alpha('#009530', 0.06), borderColor: '#009530' }, transition: 'all 0.2s' }}>
-              <AddPhotoAlternateIcon sx={{ fontSize: 26 }} />
-              <Typography variant="caption" fontWeight={600} lineHeight={1}>Ajouter</Typography>
-            </Box>
-          </Box>
+          <ImageGalleryPreview
+            images={[
+              ...existingImages.map((url) => ({
+                key: url, src: productApi.imageUrl(url),
+                removing: deleteImageMutation.isPending,
+                onRemove: () => deleteImageMutation.mutate(url),
+              })),
+              ...pendingPreviews.map((src, idx) => ({
+                key: `pending-${idx}`, src, pending: true, onRemove: () => removePending(idx),
+              })),
+            ]}
+            onAddClick={() => fileInputRef.current?.click()}
+            accentColor="#1565C0"
+          />
           <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={handleFilePick} />
         </Box>
 

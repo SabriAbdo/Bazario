@@ -32,4 +32,8 @@ export const orderApi = {
     axiosClient.get<Command>(`/commands/${id}`).then((r) => r.data),
   updateStatus: (id: number, status: CommandStatus) =>
     axiosClient.patch<Command>(`/commands/${id}/status`, { status }).then((r) => r.data),
+  getMine: (params: { page?: number; size?: number } = {}) =>
+    axiosClient.get<PagedResponse<Command>>('/commands/mes-commandes', { params }).then((r) => r.data),
+  getMineById: (id: number) =>
+    axiosClient.get<Command>(`/commands/mes-commandes/${id}`).then((r) => r.data),
 };

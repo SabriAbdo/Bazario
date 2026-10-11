@@ -133,11 +133,6 @@ CREATE TABLE app_config (
 );
 GO
 
--- Seed default config
-IF NOT EXISTS (SELECT 1 FROM app_config WHERE config_key = 'upload.dir')
-  INSERT INTO app_config (config_key, config_value) VALUES ('upload.dir', './uploads');
-GO
-
 
 -- =============================================================
 -- BazarioDB -- Seed data

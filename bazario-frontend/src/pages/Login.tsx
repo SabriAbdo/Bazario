@@ -1,11 +1,13 @@
 ﻿import { useState } from 'react';
 import {
   Box, Paper, TextField, Button, Typography, CircularProgress, Alert, alpha, InputAdornment, IconButton,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import BlockIcon from '@mui/icons-material/Block';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/authApi';
 import { useAuthStore } from '../store/useAuthStore';
@@ -17,6 +19,7 @@ const ROLE_HOME: Record<string, string> = {
   ADMIN: '/admin',
   OPERATEUR: '/operateur/commandes',
   STOCK_OPERATEUR: '/stock/produits',
+  CLIENT: '/orders',
 };
 
 export default function Login() {
@@ -24,6 +27,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [disabledDialog, setDisabledDialog] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -38,8 +42,13 @@ export default function Login() {
       toast.success(t('auth.welcome', { name: res.user.fullName }));
       navigate(ROLE_HOME[res.user.role] ?? '/');
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? t('auth.wrong_credentials'));
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 403) {
+        setDisabledDialog(true);
+      } else {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg ?? t('auth.wrong_credentials'));
+      }
     } finally {
       setLoading(false);
     }
@@ -72,7 +81,7 @@ export default function Login() {
 
           <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <TextField
-              label={t('auth.email')} required fullWidth size="medium"
+              label={t('auth.username_or_email')} required fullWidth size="medium"
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
               autoComplete="username"
@@ -111,6 +120,21 @@ export default function Login() {
           </Box>
         </Paper>
       </Box>
+
+      <Dialog open={disabledDialog} onClose={() => setDisabledDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <BlockIcon color="error" />
+          Compte désactivé
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Votre compte n'est pas activé. Veuillez contacter l'administrateur.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button variant="contained" onClick={() => setDisabledDialog(false)}>Fermer</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

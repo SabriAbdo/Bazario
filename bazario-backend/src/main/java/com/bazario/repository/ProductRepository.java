@@ -88,5 +88,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     long countByDeletedFalseAndApprovedByAdminFalse();
 
+    /** Admin-curated products for the home page "Meilleures ventes" / "Nouvelles arrivées" / "Populaires" sections */
+    List<Product> findByFeaturedBestSellerTrueAndDeletedFalseAndApprovedByAdminTrueOrderByCreatedAtDesc();
+
+    List<Product> findByFeaturedNewArrivalTrueAndDeletedFalseAndApprovedByAdminTrueOrderByCreatedAtDesc();
+
+    List<Product> findByFeaturedPopularTrueAndDeletedFalseAndApprovedByAdminTrueOrderByCreatedAtDesc();
+
+
     long countByDeletedFalseAndApprovedByAdminTrue();
 }

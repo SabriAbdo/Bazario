@@ -12,7 +12,6 @@ import com.bazario.repository.ProductVariantRepository;
 import com.bazario.repository.OrderItemRepository;
 import com.bazario.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,32 +22,26 @@ import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.security.access.AccessDeniedException;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProductService {
 
-    @Value("${upload.dir:./uploads}")
-    private String uploadDir;
-
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final ProductVariantRepository variantRepository;
     private final CategorieRepository categorieRepository;
     private final OrderItemRepository orderItemRepository;
+    private final CloudinaryService cloudinaryService;
+    private final ActivityLogService activityLogService;
 
     public Page<ProductDto.Response> getProductsPaged(
             String q, String categorie, String marque,
@@ -75,27 +68,77 @@ public class ProductService {
                 .stream().map(this::toDto).toList();
     }
 
-    /** Best-selling approved products, ranked by total quantity sold; falls back to newest products when no sales exist */
+    /** Best-selling approved products: admin-curated picks first, then ranked by total quantity sold; falls back to newest products when still short */
     public List<ProductDto.Response> getBestSellers(int limit) {
-        List<Long> rankedIds = orderItemRepository.findBestSellingProductIds(
-                com.bazario.entity.Order.OrderStatus.ANNULEE,
-                com.bazario.entity.Order.OrderStatus.REFUSEE,
-                PageRequest.of(0, limit));
-        Map<Long, com.bazario.entity.Product> byId = productRepository.findAllById(rankedIds).stream()
-                .filter(p -> !p.isDeleted() && p.isApprovedByAdmin())
-                .collect(Collectors.toMap(com.bazario.entity.Product::getId, p -> p, (a, b) -> a, LinkedHashMap::new));
+        List<ProductDto.Response> result = new java.util.ArrayList<>();
+        Set<Long> seen = new java.util.HashSet<>();
 
-        List<ProductDto.Response> result = rankedIds.stream()
-                .map(byId::get)
-                .filter(java.util.Objects::nonNull)
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        productRepository.findByFeaturedBestSellerTrueAndDeletedFalseAndApprovedByAdminTrueOrderByCreatedAtDesc()
+                .stream().limit(limit)
+                .forEach(p -> { if (seen.add(p.getId())) result.add(toDto(p)); });
+
+        if (result.size() < limit) {
+            List<Long> rankedIds = orderItemRepository.findBestSellingProductIds(
+                    com.bazario.entity.Order.OrderStatus.ANNULEE,
+                    com.bazario.entity.Order.OrderStatus.REFUSEE,
+                    PageRequest.of(0, limit));
+            Map<Long, com.bazario.entity.Product> byId = productRepository.findAllById(rankedIds).stream()
+                    .filter(p -> !p.isDeleted() && p.isApprovedByAdmin())
+                    .collect(Collectors.toMap(com.bazario.entity.Product::getId, p -> p, (a, b) -> a, LinkedHashMap::new));
+
+            rankedIds.stream()
+                    .map(byId::get)
+                    .filter(java.util.Objects::nonNull)
+                    .filter(p -> seen.add(p.getId()))
+                    .limit((long) limit - result.size())
+                    .forEach(p -> result.add(toDto(p)));
+        }
 
         if (result.size() < limit) {
             Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
             productRepository.findByDeletedFalse(pageable).getContent().stream()
                     .filter(com.bazario.entity.Product::isApprovedByAdmin)
-                    .filter(p -> result.stream().noneMatch(r -> r.id().equals(p.getId())))
+                    .filter(p -> seen.add(p.getId()))
+                    .limit((long) limit - result.size())
+                    .forEach(p -> result.add(toDto(p)));
+        }
+        return result;
+    }
+
+    /** New arrivals: admin-curated picks first, then newest products by creation date */
+    public List<ProductDto.Response> getNewArrivals(int limit) {
+        List<ProductDto.Response> result = new java.util.ArrayList<>();
+        Set<Long> seen = new java.util.HashSet<>();
+
+        productRepository.findByFeaturedNewArrivalTrueAndDeletedFalseAndApprovedByAdminTrueOrderByCreatedAtDesc()
+                .stream().limit(limit)
+                .forEach(p -> { if (seen.add(p.getId())) result.add(toDto(p)); });
+
+        if (result.size() < limit) {
+            Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+            productRepository.findByDeletedFalse(pageable).getContent().stream()
+                    .filter(com.bazario.entity.Product::isApprovedByAdmin)
+                    .filter(p -> seen.add(p.getId()))
+                    .limit((long) limit - result.size())
+                    .forEach(p -> result.add(toDto(p)));
+        }
+        return result;
+    }
+
+    /** Popular products: admin-curated picks first, then most-liked products as a fallback */
+    public List<ProductDto.Response> getPopularProducts(int limit) {
+        List<ProductDto.Response> result = new java.util.ArrayList<>();
+        Set<Long> seen = new java.util.HashSet<>();
+
+        productRepository.findByFeaturedPopularTrueAndDeletedFalseAndApprovedByAdminTrueOrderByCreatedAtDesc()
+                .stream().limit(limit)
+                .forEach(p -> { if (seen.add(p.getId())) result.add(toDto(p)); });
+
+        if (result.size() < limit) {
+            Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "likesCount"));
+            productRepository.findByDeletedFalse(pageable).getContent().stream()
+                    .filter(com.bazario.entity.Product::isApprovedByAdmin)
+                    .filter(p -> seen.add(p.getId()))
                     .limit((long) limit - result.size())
                     .forEach(p -> result.add(toDto(p)));
         }
@@ -111,6 +154,22 @@ public class ProductService {
         Product p = productRepository.findById(id)
                 .filter(pr -> !pr.isDeleted() && pr.isApprovedByAdmin())
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
+        return toDto(p);
+    }
+
+    /** Same as getById, but also allows the owner (or an admin) to view their own pending (not-yet-approved) product. */
+    public ProductDto.Response getById(Long id, String username) {
+        Product p = productRepository.findById(id)
+                .filter(pr -> !pr.isDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
+        if (!p.isApprovedByAdmin()) {
+            User user = username != null ? userRepository.findByUsername(username).orElse(null) : null;
+            boolean isOwnerOrAdmin = user != null
+                    && (user.getRole() == User.Role.ADMIN || p.getCreatedBy().getId().equals(user.getId()));
+            if (!isOwnerOrAdmin) {
+                throw new ResourceNotFoundException("Produit introuvable");
+            }
+        }
         return toDto(p);
     }
 
@@ -150,7 +209,9 @@ public class ProductService {
                 .approvedByAdmin(autoApproved)
                 .createdBy(user)
                 .build();
-        return toDto(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        activityLogService.log("Creation produit", "Produit cree: " + saved.getLibelle());
+        return toDto(saved);
     }
 
     @Transactional
@@ -163,6 +224,11 @@ public class ProductService {
 
         if (user.getRole() != User.Role.ADMIN && !product.getCreatedBy().getId().equals(user.getId())) {
             throw new AccessDeniedException("Vous ne pouvez modifier que vos propres produits");
+        }
+
+        // Once admin-approved, catalogue data becomes admin-controlled; the owning operator can no longer edit it
+        if (user.getRole() != User.Role.ADMIN && product.isApprovedByAdmin()) {
+            throw new AccessDeniedException("Ce produit est déjà approuvé : il ne peut plus être modifié");
         }
 
         Set<Category> categories = req.categories() != null ? resolveCategories(req.categories()) : null;
@@ -187,7 +253,9 @@ public class ProductService {
         if (req.unite() != null) product.setUnite(req.unite());
         if (req.quantiteMin() != null) product.setQuantiteMin(req.quantiteMin());
 
-        return toDto(productRepository.save(product));
+        ProductDto.Response dto = toDto(productRepository.save(product));
+        activityLogService.log("Modification produit", "Produit modifie: " + product.getLibelle());
+        return dto;
     }
 
     @Transactional
@@ -201,6 +269,7 @@ public class ProductService {
         }
         product.setDeleted(true);
         productRepository.save(product);
+        activityLogService.log("Suppression produit", "Produit supprime: " + product.getLibelle());
     }
 
     public Page<ProductDto.Response> getProductsByCreator(String username, int page, int size, String sortField, String sortDir, String q) {
@@ -229,20 +298,9 @@ public class ProductService {
         if (user.getRole() != User.Role.ADMIN && !product.getCreatedBy().getId().equals(user.getId())) {
             throw new AccessDeniedException("Vous ne pouvez modifier que vos propres produits");
         }
-        try {
-            Path dir = Paths.get(uploadDir, "products", String.valueOf(id)).toAbsolutePath().normalize();
-            Files.createDirectories(dir);
-            for (MultipartFile file : files) {
-                if (file.isEmpty()) continue;
-                String ext = "";
-                String orig = file.getOriginalFilename();
-                if (orig != null && orig.contains(".")) ext = orig.substring(orig.lastIndexOf("."));
-                String filename = UUID.randomUUID() + ext;
-                Files.copy(file.getInputStream(), dir.resolve(filename));
-                product.getImages().add("/uploads/products/" + id + "/" + filename);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Erreur lors de l'upload des images", e);
+        for (MultipartFile file : files) {
+            if (file.isEmpty()) continue;
+            product.getImages().add(cloudinaryService.upload(file, "bazario/products/" + id));
         }
         return toDto(productRepository.save(product));
     }
@@ -258,12 +316,7 @@ public class ProductService {
             throw new AccessDeniedException("Vous ne pouvez modifier que vos propres produits");
         }
         product.getImages().remove(imageUrl);
-        // delete physical file
-        try {
-            String filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
-            Path file = Paths.get(uploadDir, "products", String.valueOf(id), filename).toAbsolutePath().normalize();
-            Files.deleteIfExists(file);
-        } catch (IOException ignored) {}
+        cloudinaryService.delete(imageUrl);
         return toDto(productRepository.save(product));
     }
 
@@ -305,7 +358,9 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Produit supprim\u00e9 introuvable"));
         product.setDeleted(false);
         product.setApprovedByAdmin(true);
-        return toDto(productRepository.save(product));
+        ProductDto.Response dto = toDto(productRepository.save(product));
+        activityLogService.log("Restauration produit", "Produit restaure: " + product.getLibelle());
+        return dto;
     }
 
     @Transactional
@@ -374,6 +429,10 @@ public class ProductService {
                 p.getImages() != null ? p.getImages() : List.of(),
                 p.isDeleted(),
                 variants,
-                p.isApprovedByAdmin());
+                p.isApprovedByAdmin(),
+                p.getLikesCount(),
+                p.isFeaturedBestSeller(),
+                p.isFeaturedNewArrival(),
+                p.isFeaturedPopular());
     }
 }

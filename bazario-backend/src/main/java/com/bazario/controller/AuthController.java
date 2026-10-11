@@ -21,6 +21,11 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(req));
     }
 
+    @PostMapping("/register")
+    public ResponseEntity<AuthDto.AuthResponse> register(@Valid @RequestBody AuthDto.RegisterRequest req) {
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(authService.register(req));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<AuthDto.UserDto> me(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(authService.getMe(userDetails.getUsername()));

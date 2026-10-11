@@ -42,3 +42,25 @@ export async function getCroppedImageFile(
     }, mimeType, 0.92);
   });
 }
+
+/** Renders the cropped region onto a small canvas and returns a data URL, for live avatar-style previews. */
+export async function getCroppedPreviewUrl(
+  imageSrc: string,
+  cropArea: CropArea,
+  size = 160,
+): Promise<string> {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context unavailable');
+
+  ctx.drawImage(
+    image,
+    cropArea.x, cropArea.y, cropArea.width, cropArea.height,
+    0, 0, size, size,
+  );
+
+  return canvas.toDataURL('image/jpeg', 0.85);
+}

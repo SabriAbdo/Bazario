@@ -44,7 +44,7 @@ export default function OrderDetail() {
 
   const { data: order, isLoading } = useQuery<Command>({
     queryKey: ['order', orderId],
-    queryFn: () => orderApi.getById(orderId),
+    queryFn: () => orderApi.getMineById(orderId),
     enabled: !!orderId,
     refetchInterval: 15000, // poll every 15 s instead of WebSocket
   });

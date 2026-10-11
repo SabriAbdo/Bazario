@@ -28,16 +28,24 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
+import BookmarkAddedIcon from '@mui/icons-material/BookmarkAdded';
 import ProductDetailDialog, { UNITE_LABEL } from '../components/ProductDetailDialog';
 import { buildCategoryDisplays, findCategoryDisplay, findCategoryDisplays, ALL_CATEGORY } from '../utils/categoryDisplay';
 import type { CategoryDisplay } from '../utils/categoryDisplay';
+import CategoryHoverCard from '../components/common/CategoryHoverCard';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import LinearProgress from '@mui/material/LinearProgress';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { productApi } from '../api/productApi';
 import { categoryApi } from '../api/miscApi';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useWishlist } from '@/hooks/useWishlist';
+import { useLikes } from '@/hooks/useLikes';
 import toast from 'react-hot-toast';
 import type { Category, Product } from '../types';
 import { useTranslation } from 'react-i18next';
@@ -45,7 +53,7 @@ import { useTranslation } from 'react-i18next';
 const PAGE_SIZE = 24;
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-function ProductCard({ product, categoryDisplays, added, onAdd, onDetails, isStockOrAdmin, onEdit, onDelete }: {
+export function ProductCard({ product, categoryDisplays, added, onAdd, onDetails, isStockOrAdmin, onEdit, onDelete }: {
   product: Product; categoryDisplays: CategoryDisplay[]; added: boolean; onAdd: () => void; onDetails: () => void;
   isStockOrAdmin?: boolean; onEdit?: () => void; onDelete?: () => void;
 }) {
@@ -55,10 +63,59 @@ function ProductCard({ product, categoryDisplays, added, onAdd, onDetails, isSto
   const uniteLabel = UNITE_LABEL[product.unite ?? 'PIECE'] ?? 'pce';
   const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixPromo < product.prix;
   const [confirming, setConfirming] = useState(false);
+  const navigate = useNavigate();
+  const { isClient, ids: wishlistIds, toggle: toggleWishlist } = useWishlist();
+  const { ids: likeIds, toggle: toggleLike } = useLikes();
+  const isWishlisted = wishlistIds.has(product.id);
+  const isLiked = likeIds.has(product.id);
+
+  const handleWishlistClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isClient) {
+      toast('Connectez-vous avec un compte Client pour utiliser la liste de souhaits');
+      navigate('/login');
+      return;
+    }
+    toggleWishlist(product.id);
+  };
+
+  const handleLikeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isClient) {
+      toast('Connectez-vous avec un compte Client pour aimer un produit');
+      navigate('/login');
+      return;
+    }
+    toggleLike(product.id);
+  };
 
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Top: image OR color band + icon */}
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+      <Box sx={{ position: 'absolute', top: 6, right: 6, zIndex: 2, display: 'flex', gap: 0.5 }}>
+        <Tooltip title={isLiked ? 'Ne plus aimer' : 'Aimer ce produit'}>
+          <Box sx={{
+            display: 'flex', alignItems: 'center', gap: 0.25, borderRadius: 5,
+            bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#fff' }, pr: 0.75,
+          }}>
+            <IconButton size="small" onClick={handleLikeClick}>
+              {isLiked ? <FavoriteIcon fontSize="small" color="error" /> : <FavoriteBorderIcon fontSize="small" />}
+            </IconButton>
+            <Typography variant="caption" fontWeight={700} color="text.secondary">
+              {product.likesCount ?? 0}
+            </Typography>
+          </Box>
+        </Tooltip>
+        <Tooltip title={isWishlisted ? 'Retirer de la liste de souhaits' : 'Ajouter à la liste de souhaits'}>
+          <IconButton size="small" onClick={handleWishlistClick}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#fff' },
+            }}>
+            {isWishlisted ? <BookmarkAddedIcon fontSize="small" color="primary" /> : <BookmarkAddIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Top: product image, or category picture + label when no product photo */}
       {product.images?.length > 0 ? (
         <Box onClick={onDetails} sx={{ height: 160, overflow: 'hidden', position: 'relative', bgcolor: '#f5f5f5', cursor: 'pointer' }}>
           <Box component="img"
@@ -66,31 +123,31 @@ function ProductCard({ product, categoryDisplays, added, onAdd, onDetails, isSto
             alt={product.libelle}
             sx={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.04)' } }}
           />
-          <Chip label={catLabel} size="small"
-            sx={{ position: 'absolute', top: 8, left: 8, bgcolor: alpha(cat.color, 0.9), color: '#fff', fontWeight: 700, fontSize: '0.62rem', height: 20 }} />
-        </Box>
-      ) : (
-        <>
-          <Box sx={{ bgcolor: cat.color, height: 6 }} />
           <Box sx={{
-            bgcolor: alpha(cat.color, 0.06), px: 2, pt: 2, pb: 1,
-            display: 'flex', alignItems: 'center', gap: 1.5,
+            position: 'absolute', top: 8, left: 8, display: 'flex', alignItems: 'center', gap: 0.5,
+            bgcolor: alpha('#000', 0.55), borderRadius: 10, px: 1, py: 0.25,
           }}>
-            <Box sx={{
-              bgcolor: alpha(cat.color, 0.15), borderRadius: 2, width: 32, height: 32,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: cat.color, flexShrink: 0, overflow: 'hidden',
-            }}>
+            <Box sx={{ width: 16, height: 16, borderRadius: '50%', overflow: 'hidden', display: 'flex', color: '#fff', '& svg': { fontSize: 14 }, '& img': { width: '100%', height: '100%', objectFit: 'cover' } }}>
               {cat.icon}
             </Box>
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Chip
-                label={catLabel}
-                size="small"
-                sx={{ bgcolor: alpha(cat.color, 0.12), color: cat.color, fontWeight: 700, fontSize: '0.65rem', height: 20 }}
-              />
-            </Box>
+            <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '0.62rem', lineHeight: 1 }}>
+              {catLabel}
+            </Typography>
           </Box>
-        </>
+        </Box>
+      ) : (
+        <Box sx={{ px: 2, pt: 2, pb: 1, display: 'flex', alignItems: 'center', gap: 1.25 }}>
+          <Box sx={{
+            width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, bgcolor: '#f5f5f5',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary', '& svg': { fontSize: 18 },
+            '& img': { width: '100%', height: '100%', objectFit: 'cover' },
+          }}>
+            {cat.icon}
+          </Box>
+          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {catLabel}
+          </Typography>
+        </Box>
       )}
 
       <CardContent sx={{ flexGrow: 1, px: 2, py: 1.5 }}>
@@ -212,7 +269,7 @@ function ProductCard({ product, categoryDisplays, added, onAdd, onDetails, isSto
 export default function Catalogue() {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState<string>(() => searchParams.get('q') ?? '');
   const [activeCategory, setActiveCategory] = useState<string>(() => searchParams.get('cat') ?? 'all');
   const [justAdded, setJustAdded] = useState<Set<number>>(new Set());
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -249,7 +306,8 @@ export default function Catalogue() {
   });
 
   // Debounced filter values sent to backend
-  const [debouncedSearch, setDebouncedSearch] = useState('');  useEffect(() => {
+  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('q') ?? '');
+  useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
     return () => clearTimeout(t);
   }, [search]);
@@ -275,7 +333,7 @@ export default function Catalogue() {
   // Reset to page 0 when filters change
   useEffect(() => { setPage(0); }, [debouncedSearch, backendSort, activeCategory, filterMarque, debouncedPriceMin, debouncedPriceMax]);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: ['products', debouncedSearch, backendSort, page, activeCategory, filterMarque, debouncedPriceMin, debouncedPriceMax],
     queryFn: () => productApi.getAll({
       q: debouncedSearch || undefined,
@@ -285,7 +343,11 @@ export default function Catalogue() {
       maxPrix: debouncedPriceMax ? parseFloat(debouncedPriceMax) : undefined,
       page, size: PAGE_SIZE, ...backendSort,
     }),
+    // Keep showing the previous category's products while the new ones load, for a smooth cross-fade instead of a jarring flash-to-skeleton.
+    placeholderData: keepPreviousData,
   });
+  const showSkeleton = isLoading && !data;
+  const isSwitching = isFetching && !!data;
 
   const visible = useMemo(() => {
     let result = (data?.content ?? []).filter((p) => p.prixActif);
@@ -341,74 +403,39 @@ export default function Catalogue() {
 
   return (
     <Box>
-      {/* ── Hero Banner ─────────────────────────────────────────────────────── */}
+      {/* ── Slim page header: title + search (hero/marketing lives on Home) ─── */}
       <Box sx={{
-        background: 'linear-gradient(135deg, #0D1E36 0%, #0a2744 50%, #0D1E36 100%)',
-        position: 'relative', overflow: 'hidden',
-        px: { xs: 3, md: 8 }, py: { xs: 5, md: 7 },
+        bgcolor: '#0D1E36', px: { xs: 2, md: 4 }, py: 2.5,
+        display: 'flex', alignItems: 'center', gap: 2.5, flexWrap: 'wrap',
       }}>
-        {/* Circuit pattern overlay */}
-        <Box sx={{
-          position: 'absolute', inset: 0, opacity: 0.04,
-          backgroundImage: `
-            repeating-linear-gradient(0deg, #fff 0px, #fff 1px, transparent 1px, transparent 40px),
-            repeating-linear-gradient(90deg, #fff 0px, #fff 1px, transparent 1px, transparent 40px)
-          `,
-        }} />
-        {/* Decorative icons */}
-        <BoltIcon sx={{ position: 'absolute', top: 24, right: '12%', fontSize: 120, color: alpha('#FF6B35', 0.06) }} />
-        <GridViewIcon sx={{ position: 'absolute', bottom: 16, right: '5%', fontSize: 60, color: alpha('#FF6B35', 0.08) }} />
-
-        <Box sx={{ position: 'relative', maxWidth: 680 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <Box sx={{ bgcolor: '#FF6B35', borderRadius: 1, px: 1.5, py: 0.4, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-              <GridViewIcon sx={{ fontSize: 14, color: '#fff' }} />
-              <Typography sx={{ fontSize: '0.7rem', color: '#fff', fontWeight: 700, letterSpacing: '0.12em' }}>
-                BAZARIO MARKETPLACE
-              </Typography>
-            </Box>
-          </Box>
-
-          <Typography variant="h2" sx={{ color: '#fff', mb: 1.5, fontSize: { xs: '2rem', md: '2.8rem' } }}>
-            {t('home.tagline')}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <GridViewIcon sx={{ fontSize: 20, color: '#FF6B35' }} />
+          <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem' }}>
+            {t('catalogue.title')}
           </Typography>
-          <Typography sx={{ color: alpha('#fff', 0.7), mb: 4, fontSize: '1rem', maxWidth: 500 }}>
-            {t('home.subtitle')}
+          <Typography sx={{ color: alpha('#fff', 0.55), fontSize: '0.78rem' }}>
+            {(totalElements || 0).toLocaleString('fr-MA')} {t('catalogue.products_count_suffix')}
           </Typography>
-
-          {/* Search */}
-          <TextField
-            placeholder={t('catalogue.search_placeholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: alpha('#fff', 0.6) }} /></InputAdornment> }}
-            sx={{
-              maxWidth: 520, width: '100%',
-              '& .MuiOutlinedInput-root': {
-                bgcolor: alpha('#fff', 0.1), borderRadius: 2,
-                color: '#fff', fontSize: '0.9rem',
-                '& fieldset': { borderColor: alpha('#fff', 0.2) },
-                '&:hover fieldset': { borderColor: alpha('#FF6B35', 0.6) },
-                '&.Mui-focused fieldset': { borderColor: '#FF6B35' },
-              },
-              '& input::placeholder': { color: alpha('#fff', 0.5) },
-            }}
-          />
-
-          {/* Stats row */}
-          <Box sx={{ display: 'flex', gap: 3, mt: 3, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Produits', value: totalElements || '…' },
-              { label: 'Catégories', value: categories.length },
-              { label: 'Livraison', value: 'Rapide' },
-            ].map((s) => (
-              <Box key={s.label} sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography sx={{ color: '#FF6B35', fontWeight: 800, fontSize: '1.25rem', lineHeight: 1 }}>{s.value}</Typography>
-                <Typography sx={{ color: alpha('#fff', 0.55), fontSize: '0.72rem', letterSpacing: '0.08em' }}>{s.label.toUpperCase()}</Typography>
-              </Box>
-            ))}
-          </Box>
         </Box>
+
+        <TextField
+          placeholder={t('catalogue.search_placeholder')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          size="small"
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: alpha('#fff', 0.6), fontSize: 18 }} /></InputAdornment> }}
+          sx={{
+            flex: 1, minWidth: 220, maxWidth: 480, ml: { md: 'auto' },
+            '& .MuiOutlinedInput-root': {
+              bgcolor: alpha('#fff', 0.1), borderRadius: 2,
+              color: '#fff', fontSize: '0.85rem',
+              '& fieldset': { borderColor: alpha('#fff', 0.2) },
+              '&:hover fieldset': { borderColor: alpha('#FF6B35', 0.6) },
+              '&.Mui-focused fieldset': { borderColor: '#FF6B35' },
+            },
+            '& input::placeholder': { color: alpha('#fff', 0.5) },
+          }}
+        />
       </Box>
 
       {/* ── Category Filter ──────────────────────────────────────────────────── */}
@@ -433,7 +460,8 @@ export default function Catalogue() {
               const count = categoryCount(cat.key);
               const active = activeCategory === cat.key;
               return (
-                <motion.div key={cat.key} whileHover={{ y: -4 }} whileTap={{ scale: 0.94 }} style={{ flexShrink: 0 }}>
+                <CategoryHoverCard key={cat.key} label={cat.label} imageUrl={cat.imageUrl} description={cat.description}>
+                <motion.div whileHover={{ y: -4 }} whileTap={{ scale: 0.94 }} style={{ flexShrink: 0 }}>
                   <Box
                     onClick={() => setActiveCategory(cat.key)}
                     sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, cursor: 'pointer', width: 82 }}
@@ -451,7 +479,7 @@ export default function Catalogue() {
                           width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden',
                           bgcolor: '#fff', border: '2px solid #fff',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: cat.color, '& svg': { fontSize: 28 }, '& img': { width: '100%', height: '100%', objectFit: 'cover' },
+                          color: cat.color, '& svg': { fontSize: 28 }, '& img': { width: '100%', height: '100%', objectFit: 'contain' },
                         }}>
                           {cat.icon}
                         </Box>
@@ -474,6 +502,7 @@ export default function Catalogue() {
                     </Typography>
                   </Box>
                 </motion.div>
+                </CategoryHoverCard>
               );
             })}
           </Box>
@@ -618,10 +647,21 @@ export default function Catalogue() {
       </Box>
 
       {/* ── Product Grid ─────────────────────────────────────────────────────── */}
-      <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
+      <Box sx={{ px: { xs: 2, md: 4 }, py: 4, position: 'relative' }}>
+        {/* Thin top progress bar while switching category/filters without clearing the grid */}
+        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, overflow: 'hidden', borderRadius: 1 }}>
+          <AnimatePresence>
+            {isSwitching && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                <LinearProgress sx={{ height: 2 }} color="primary" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Box>
+
         {isError && <Alert severity="error" sx={{ mb: 3 }}>Erreur lors du chargement des produits.</Alert>}
 
-        {!isLoading && visible.length > 0 && (
+        {!showSkeleton && visible.length > 0 && (
           <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" color="text.secondary">
               <strong>{visible.length}</strong> produit{visible.length > 1 ? 's' : ''} trouvé{visible.length > 1 ? 's' : ''}
@@ -630,32 +670,37 @@ export default function Catalogue() {
           </Box>
         )}
 
-        <Grid container spacing={2.5}>
-          {isLoading && Array.from({ length: 8 }).map((_, i) => (
+        <Grid
+          container spacing={2.5}
+          sx={{ opacity: isSwitching ? 0.55 : 1, filter: isSwitching ? 'saturate(0.85)' : 'none', transition: 'opacity 0.25s ease, filter 0.25s ease' }}
+        >
+          {showSkeleton && Array.from({ length: 8 }).map((_, i) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={`skel-${i}`}>
-              <Card sx={{ height: '100%', borderRadius: 3 }}>
-                <Skeleton variant="rectangular" height={180} sx={{ transform: 'none' }} />
-                <CardContent sx={{ pb: 1 }}>
-                  <Skeleton variant="text" width="35%" height={20} sx={{ mb: 1 }} />
-                  <Skeleton variant="text" width="75%" height={26} sx={{ mb: 0.5 }} />
-                  <Skeleton variant="text" width="50%" height={20} />
-                  <Skeleton variant="text" width="40%" height={28} sx={{ mt: 1 }} />
-                </CardContent>
-                <CardActions sx={{ px: 2, pb: 2 }}>
-                  <Skeleton variant="rectangular" width="100%" height={36} sx={{ borderRadius: 2 }} />
-                </CardActions>
-              </Card>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2, delay: Math.min(i * 0.03, 0.2) }}>
+                <Card sx={{ height: '100%', borderRadius: 3 }}>
+                  <Skeleton variant="rectangular" animation="wave" height={180} sx={{ transform: 'none' }} />
+                  <CardContent sx={{ pb: 1 }}>
+                    <Skeleton variant="text" animation="wave" width="35%" height={20} sx={{ mb: 1 }} />
+                    <Skeleton variant="text" animation="wave" width="75%" height={26} sx={{ mb: 0.5 }} />
+                    <Skeleton variant="text" animation="wave" width="50%" height={20} />
+                    <Skeleton variant="text" animation="wave" width="40%" height={28} sx={{ mt: 1 }} />
+                  </CardContent>
+                  <CardActions sx={{ px: 2, pb: 2 }}>
+                    <Skeleton variant="rectangular" animation="wave" width="100%" height={36} sx={{ borderRadius: 2 }} />
+                  </CardActions>
+                </Card>
+              </motion.div>
             </Grid>
           ))}
           <AnimatePresence mode="popLayout">
-            {visible.map((product, i) => (
+            {!showSkeleton && visible.map((product, i) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
                 <motion.div
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.3) }}
+                  transition={{ duration: 0.3, delay: Math.min(i * 0.03, 0.24), ease: 'easeOut' }}
                   style={{ height: '100%' }}
                 >
                   <ProductCard
@@ -697,7 +742,7 @@ export default function Catalogue() {
           </Box>
         )}
 
-        {!isLoading && visible.length === 0 && (
+        {!showSkeleton && !isSwitching && visible.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <BoltIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h6" color="text.secondary">{t('catalogue.no_results')}</Typography>

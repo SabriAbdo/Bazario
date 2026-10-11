@@ -14,6 +14,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+    Page<Order> findByCustomer_UsernameOrderByCreatedAtDesc(String username, Pageable pageable);
+
     List<Order> findByCreatedAtAfter(LocalDateTime since);
 
     long countByType(Order.OrderType type);

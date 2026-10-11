@@ -8,6 +8,7 @@ import type { User } from './types';
 
 // Layout
 import MainLayout from './components/layout/MainLayout';
+import SessionExpiryWatcher from './components/common/SessionExpiryWatcher';
 
 // Public pages
 import Home from './pages/Home';
@@ -63,6 +64,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Toaster position="top-right" />
+        <SessionExpiryWatcher />
         <Routes>
           <Route element={<MainLayout />}>
             {/* Public */}
@@ -74,10 +76,10 @@ export default function App() {
             <Route path="/checkout/succes" element={<CheckoutSucces />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/orders/:id" element={<OrderDetail />} />
+            <Route path="/orders" element={<Protected roles={['CLIENT']}><Orders /></Protected>} />
+            <Route path="/orders/:id" element={<Protected roles={['CLIENT']}><OrderDetail /></Protected>} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/wishlist" element={<Protected roles={['CLIENT']}><Wishlist /></Protected>} />
 
             {/* Operateur */}
             <Route path="/operateur/commandes" element={<Protected roles={['OPERATEUR', 'ADMIN']}><OperateurCommandes /></Protected>} />

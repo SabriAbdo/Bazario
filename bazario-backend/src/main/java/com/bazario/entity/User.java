@@ -17,6 +17,9 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String username;
 
+    @Column(unique = true, length = 150)
+    private String email;
+
     @Column(nullable = false, length = 255)
     private String password;
 
@@ -48,6 +51,6 @@ public class User {
     }
 
     public enum Role {
-        ADMIN, OPERATEUR, STOCK_OPERATEUR
+        ADMIN, OPERATEUR, STOCK_OPERATEUR, CLIENT
     }
 }

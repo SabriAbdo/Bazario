@@ -67,6 +67,24 @@ public class Product {
     @Builder.Default
     private boolean approvedByAdmin = false;
 
+    /** Denormalized count of ProductLike rows, kept in sync on like/unlike */
+    @Column(name = "likes_count", nullable = false)
+    @Builder.Default
+    private int likesCount = 0;
+
+    /** Admin-curated flags controlling the "Meilleures ventes" / "Nouvelles arrivées" / "Populaires" sections on the home page */
+    @Column(name = "featured_best_seller", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean featuredBestSeller = false;
+
+    @Column(name = "featured_new_arrival", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean featuredNewArrival = false;
+
+    @Column(name = "featured_popular", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean featuredPopular = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
     private User createdBy;

@@ -59,8 +59,6 @@ public class SecurityConfig {
                 // Comments — public read & post, admin delete via @PreAuthorize
                 .requestMatchers(HttpMethod.GET, "/api/v1/products/*/comments").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/products/*/comments").permitAll()
-                // Uploads
-                .requestMatchers("/uploads/**").permitAll()
                 // OpenAPI / Swagger UI
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 // Everything else requires authentication

@@ -1,6 +1,7 @@
 package com.bazario.controller;
 
 import com.bazario.dto.ProductDto;
+import com.bazario.service.ProductLikeService;
 import com.bazario.service.ProductService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -18,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/products")
@@ -26,6 +28,7 @@ import java.util.List;
 public class ProductController {
 
     private final ProductService productService;
+    private final ProductLikeService productLikeService;
 
     @GetMapping
     public ResponseEntity<Page<ProductDto.Response>> getAll(
@@ -49,9 +52,26 @@ public class ProductController {
         return ResponseEntity.ok(productService.getBestSellers(limit));
     }
 
+    /** Newest products, admin-curated picks shown first */
+    @GetMapping("/new-arrivals")
+    public ResponseEntity<List<ProductDto.Response>> getNewArrivals(
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int limit) {
+        return ResponseEntity.ok(productService.getNewArrivals(limit));
+    }
+
+    /** Popular products, admin-curated picks shown first */
+    @GetMapping("/popular")
+    public ResponseEntity<List<ProductDto.Response>> getPopular(
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int limit) {
+        return ResponseEntity.ok(productService.getPopularProducts(limit));
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<ProductDto.Response> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(productService.getById(id));
+    public ResponseEntity<ProductDto.Response> getById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(productService.getById(id, username));
     }
 
     @PostMapping
@@ -62,6 +82,27 @@ public class ProductController {
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(productService.create(req, userDetails.getUsername()));
+    }
+
+    /** Client — like a product; returns the updated likes count */
+    @PostMapping("/{id}/like")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<Map<String, Integer>> like(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(Map.of("likesCount", productLikeService.like(userDetails.getUsername(), id)));
+    }
+
+    /** Client — unlike a product; returns the updated likes count */
+    @DeleteMapping("/{id}/like")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<Map<String, Integer>> unlike(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(Map.of("likesCount", productLikeService.unlike(userDetails.getUsername(), id)));
+    }
+
+    /** Client — product ids liked by the current user, used to highlight the like button across pages */
+    @GetMapping("/likes/mine")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<List<Long>> getMyLikes(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(productLikeService.getMyLikedProductIds(userDetails.getUsername()));
     }
 
     @PutMapping("/{id}")

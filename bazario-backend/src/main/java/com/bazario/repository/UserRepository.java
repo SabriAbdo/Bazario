@@ -13,6 +13,11 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
     boolean existsByUsername(String username);
+    Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
+
+    @Query("SELECT u FROM User u WHERE u.username = :identifier OR u.email = :identifier")
+    Optional<User> findByUsernameOrEmail(@Param("identifier") String identifier);
 
     @Query("SELECT u FROM User u WHERE u.deleted = false AND (LOWER(u.fullName) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(u.username) LIKE LOWER(CONCAT('%',:q,'%')))")
     List<User> searchUsers(@Param("q") String q);

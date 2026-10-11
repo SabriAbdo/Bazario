@@ -33,8 +33,8 @@ export default function CheckoutSucces() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Button variant="contained" size="large" startIcon={<HomeIcon />} onClick={() => navigate('/')}>
-            Retour au catalogue
+          <Button variant="contained" size="large" startIcon={<HomeIcon />} onClick={() => navigate('/products')}>
+            Retour à la boutique
           </Button>
           <Button variant="outlined" size="large" startIcon={<BoltIcon />} onClick={() => navigate('/')} color="primary">
             Nouvelle commande

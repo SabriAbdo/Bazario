@@ -27,11 +27,14 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    /** Public — Visiteur places an order */
+    /** Public — Visiteur places an order; linked to the Client account when authenticated */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<OrderDto.Response> placeOrder(@Valid @RequestBody OrderDto.PlaceRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.placeOrder(req));
+    public ResponseEntity<OrderDto.Response> placeOrder(
+            @Valid @RequestBody OrderDto.PlaceRequest req,
+            @AuthenticationPrincipal(errorOnInvalidType = false) UserDetails userDetails) {
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.placeOrder(req, username));
     }
 
     /** Public — Visiteur submits a demande d'information */
@@ -82,6 +85,25 @@ public class OrderController {
     @PreAuthorize("hasRole('OPERATEUR') or hasRole('ADMIN')")
     public ResponseEntity<OrderDto.Response> getById(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.getById(id));
+    }
+
+    /** Client — own commandes, most recent first */
+    @GetMapping("/mes-commandes")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<Page<OrderDto.Response>> getMyOrders(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(orderService.getMyOrdersPaged(userDetails.getUsername(), page, size));
+    }
+
+    /** Client — view one of their own commandes */
+    @GetMapping("/mes-commandes/{id}")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<OrderDto.Response> getMyOrderById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(orderService.getByIdForCustomer(id, userDetails.getUsername()));
     }
 
     @PatchMapping("/{id}/status")

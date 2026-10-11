@@ -69,6 +69,10 @@ public class ProductDto {
             List<String> images,
             boolean deleted,
             List<VariantResponse> variants,
-            boolean approvedByAdmin
+            boolean approvedByAdmin,
+            int likesCount,
+            boolean featuredBestSeller,
+            boolean featuredNewArrival,
+            boolean featuredPopular
     ) {}
 }

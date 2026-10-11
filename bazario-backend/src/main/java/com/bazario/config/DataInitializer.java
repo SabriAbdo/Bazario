@@ -45,7 +45,7 @@ public class DataInitializer implements ApplicationRunner {
         User admin;
         if (!userRepository.existsByUsername("admin")) {
             admin = userRepository.save(User.builder()
-                    .username("admin").password(passwordEncoder.encode("Admin@123"))
+                    .username("admin").email("admin@bazario.com").password(passwordEncoder.encode("Admin@123"))
                     .fullName("Administrateur").role(User.Role.ADMIN).active(true).build());
             System.out.println("[DataInitializer] Admin created — admin / Admin@123");
         } else {
@@ -54,13 +54,18 @@ public class DataInitializer implements ApplicationRunner {
 
         if (!userRepository.existsByUsername("operateur1")) {
             userRepository.save(User.builder()
-                    .username("operateur1").password(passwordEncoder.encode("Oper@123"))
+                    .username("operateur1").email("operateur1@bazario.com").password(passwordEncoder.encode("Oper@123"))
                     .fullName("Karim Benali").role(User.Role.OPERATEUR).active(true).build());
         }
         if (!userRepository.existsByUsername("stock1")) {
             userRepository.save(User.builder()
-                    .username("stock1").password(passwordEncoder.encode("Stock@123"))
+                    .username("stock1").email("stock1@bazario.com").password(passwordEncoder.encode("Stock@123"))
                     .fullName("Sara Mansouri").role(User.Role.STOCK_OPERATEUR).active(true).build());
+        }
+        if (!userRepository.existsByUsername("client1")) {
+            userRepository.save(User.builder()
+                    .username("client1").email("client1@bazario.com").password(passwordEncoder.encode("Client@123"))
+                    .fullName("Yasmine Idrissi").role(User.Role.CLIENT).active(true).build());
         }
 
         // --- Electrical products ---

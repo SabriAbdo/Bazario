@@ -1,21 +1,23 @@
-﻿import { useState } from 'react';
+﻿import { useMemo, useRef, useState } from 'react';
 import {
   Box, Container, Typography, Button, Grid, Paper,
-  Chip, Skeleton, InputBase, alpha,
+  Chip, Skeleton, InputBase, alpha, IconButton,
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Search } from '@mui/icons-material';
 import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { productApi } from '@/api/productApi';
 import { categoryApi } from '@/api/miscApi';
+import { resolveImageUrl } from '@/utils/categoryDisplay';
+import CategoryHoverCard from '@/components/common/CategoryHoverCard';
 import ProductCarousel from '@/components/product/ProductCarousel';
 import type { Category, PagedResponse, Product } from '@/types';
 import { useTranslation } from 'react-i18next';
-
-// Empty in dev (Vite proxy) and same-origin prod; set VITE_API_BASE_URL for cross-origin deploys
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+import { getRecentlyViewedProductIds, getTopRecentCategories } from '@/utils/recentlyViewed';
 
 const CAT_COLORS = [
   '#E8521A','#3730A3','#D97706','#16A34A','#DC2626',
@@ -42,14 +44,48 @@ export default function Home() {
     queryFn: () => productApi.getBestSellers(12),
   });
 
-  const { data: latest, isLoading: loadingLatest } = useQuery<PagedResponse<Product>>({
+  const { data: latest, isLoading: loadingLatest } = useQuery<Product[]>({
     queryKey: ['products', 'home-latest'],
-    queryFn: () => productApi.getAll({ page: 0, size: 12, sort: 'createdAt', sortDir: 'desc' }),
+    queryFn: () => productApi.getNewArrivals(12),
+  });
+
+  const { data: popular, isLoading: loadingPopular } = useQuery<Product[]>({
+    queryKey: ['products', 'home-popular'],
+    queryFn: () => productApi.getPopular(12),
   });
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: () => categoryApi.getAll(),
+  });
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const scrollCategories = (dir: 'left' | 'right') =>
+    categoryScrollRef.current?.scrollBy({ left: dir === 'right' ? 280 : -280, behavior: 'smooth' });
+
+  // US6.1/US6.2 — localStorage-backed recently-viewed categories (survives across sessions until expiry)
+  const recentCategorySlugs = useMemo(() => getTopRecentCategories(2), []);
+  const viewedProductIds = useMemo(() => new Set(getRecentlyViewedProductIds()), []);
+
+  const { data: recommended, isLoading: loadingRecommended } = useQuery<Product[]>({
+    queryKey: ['products', 'home-recommended', recentCategorySlugs],
+    queryFn: async () => {
+      const pages = await Promise.all(
+        recentCategorySlugs.map((cat) =>
+          productApi.getAll({ categorie: cat, page: 0, size: 8, sort: 'createdAt', sortDir: 'desc' }),
+        ),
+      );
+      const seen = new Set<number>();
+      const merged: Product[] = [];
+      for (const page of pages) {
+        for (const p of page.content) {
+          if (viewedProductIds.has(p.id) || seen.has(p.id)) continue;
+          seen.add(p.id);
+          merged.push(p);
+        }
+      }
+      return merged.slice(0, 12);
+    },
+    enabled: recentCategorySlugs.length > 0,
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -136,42 +172,77 @@ export default function Home() {
           <Typography color="text.secondary" sx={{ mb:3, fontSize:'0.9rem' }}>
             {t('home.categories_subtitle')}
           </Typography>
-          <Grid container spacing={2}>
+          <Box sx={{ display:'flex', alignItems:'center', gap:1 }}>
+            <IconButton
+              size="small" onClick={() => scrollCategories('left')}
+              sx={{ flexShrink:0, border:'1px solid', borderColor:'divider', bgcolor:'background.paper' }}
+            >
+              <ChevronLeftIcon fontSize="small" />
+            </IconButton>
+            <Box
+              ref={categoryScrollRef}
+              sx={{
+                display:'flex', gap:{ xs:2, md:3 }, overflowX:'auto', overflowY:'hidden',
+                pb:2, pt:0.5, px:0.5, scrollSnapType:'x mandatory', scrollBehavior:'smooth',
+                '&::-webkit-scrollbar':{ height:6 },
+                '&::-webkit-scrollbar-thumb':{ bgcolor:'divider', borderRadius:3 },
+              }}
+            >
             {categories
               ? categories.map((cat, idx) => {
                   const color = CAT_COLORS[idx % CAT_COLORS.length];
                   return (
-                    <Grid item xs={6} sm={4} md={3} lg={2} key={cat.id}>
-                      <Paper
-                        component={Link}
-                        to={`/products?cat=${cat.slug}`}
-                        elevation={0}
+                    <CategoryHoverCard key={cat.id} label={cat.label} imageUrl={cat.imageUrl} description={cat.description}>
+                    <Box
+                      component={Link}
+                      to={`/products?cat=${cat.slug}`}
+                      sx={{
+                        display:'flex', flexDirection:'column', alignItems:'center', gap:1,
+                        textDecoration:'none', color:'text.primary', flex:'0 0 auto',
+                        scrollSnapAlign:'start', width:92, textAlign:'center',
+                        '&:hover .category-avatar': {
+                          transform:'scale(1.08)', boxShadow:`0 0 0 3px ${alpha(color,0.35)}`,
+                        },
+                        '&:hover .category-label': { color },
+                      }}
+                    >
+                      <Box
+                        className="category-avatar"
                         sx={{
-                          display:'flex', flexDirection:'column', alignItems:'center',
-                          justifyContent:'center', gap:1.2, p:2.5, borderRadius:3,
-                          border:'1.5px solid', borderColor:'divider', textDecoration:'none',
-                          color:'text.primary', transition:'all 0.2s ease',
-                          '&:hover':{ borderColor:color, transform:'translateY(-4px)', boxShadow:`0 8px 24px ${alpha(color,0.22)}` },
+                          width:84, height:84, borderRadius:'50%', overflow:'hidden',
+                          bgcolor: alpha(color,0.1), display:'flex', alignItems:'center',
+                          justifyContent:'center', transition:'all 0.2s ease',
+                          boxShadow:`0 0 0 2px ${alpha(color,0.18)}`,
                         }}
                       >
-                        <Box sx={{ width:52,height:52,borderRadius:'50%',bgcolor:alpha(color,0.12),display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden' }}>
-                          {cat.imageUrl
-                            ? <Box component="img" src={`${API_BASE}${cat.imageUrl}`} alt={cat.label} sx={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                            : <ImageNotSupportedIcon sx={{ fontSize:24, color }} />}
-                        </Box>
-                        <Typography sx={{ fontWeight:600, textAlign:'center', fontSize:'0.78rem', lineHeight:1.3 }}>
-                          {cat.label}
-                        </Typography>
-                      </Paper>
-                    </Grid>
+                        {cat.imageUrl
+                          ? <Box component="img" src={resolveImageUrl(cat.imageUrl)} alt={cat.label} sx={{ width:'100%', height:'100%', objectFit:'contain' }} />
+                          : <ImageNotSupportedIcon sx={{ fontSize:26, color }} />}
+                      </Box>
+                      <Typography
+                        className="category-label"
+                        sx={{ fontWeight:600, fontSize:'0.72rem', lineHeight:1.2, transition:'color 0.2s ease', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', width:'100%' }}
+                      >
+                        {cat.label}
+                      </Typography>
+                    </Box>
+                    </CategoryHoverCard>
                   );
                 })
               : Array.from({ length:12 }).map((_, i) => (
-                  <Grid item xs={6} sm={4} md={3} lg={2} key={i}>
-                    <Skeleton variant="rounded" height={110} sx={{ borderRadius:3 }} />
-                  </Grid>
+                  <Box key={i} sx={{ flex:'0 0 auto', width:92, display:'flex', flexDirection:'column', alignItems:'center', gap:1 }}>
+                    <Skeleton variant="circular" width={84} height={84} />
+                    <Skeleton variant="text" width={60} />
+                  </Box>
                 ))}
-          </Grid>
+            </Box>
+            <IconButton
+              size="small" onClick={() => scrollCategories('right')}
+              sx={{ flexShrink:0, border:'1px solid', borderColor:'divider', bgcolor:'background.paper' }}
+            >
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
           {categories && (
             <Box sx={{ textAlign:'center', mt:3 }}>
               <Button component={Link} to="/products" variant="outlined" sx={{ fontWeight:600 }}>
@@ -180,6 +251,32 @@ export default function Home() {
             </Box>
           )}
         </Box>
+
+        {/* Recommended for you — based on recently viewed categories/products (localStorage, not a tracking cookie) */}
+        {(recentCategorySlugs.length > 0 && (loadingRecommended || (recommended && recommended.length >= 3))) && (
+          <Box sx={{ mb:8 }}>
+            <Box sx={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', mb:3 }}>
+              <Box>
+                <Typography variant="h2" sx={{ fontWeight:700 }}>{t('home.recommended_title')}</Typography>
+                <Typography color="text.secondary" sx={{ fontSize:'0.9rem' }}>{t('home.recommended_subtitle')}</Typography>
+              </Box>
+              <Button component={Link} to="/products" variant="outlined" sx={{ fontWeight:600 }}>
+                {t('home.see_all')}
+              </Button>
+            </Box>
+            {loadingRecommended ? (
+              <Grid container spacing={2}>
+                {Array.from({ length:4 }).map((_,i) => (
+                  <Grid item xs={12} sm={6} md={3} key={i}>
+                    <Skeleton variant="rounded" height={280} sx={{ borderRadius:2 }} />
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <ProductCarousel products={recommended ?? []} />
+            )}
+          </Box>
+        )}
 
         {/* Best sellers — stylish sliding carousel */}
         <Box sx={{ mb:8 }}>
@@ -206,7 +303,7 @@ export default function Home() {
         </Box>
 
         {/* New arrivals — stylish sliding carousel */}
-        <Box>
+        <Box sx={{ mb:8 }}>
           <Box sx={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', mb:3 }}>
             <Box>
               <Typography variant="h2" sx={{ fontWeight:700 }}>{t('home.arrivals_title')}</Typography>
@@ -225,7 +322,31 @@ export default function Home() {
               ))}
             </Grid>
           ) : (
-            <ProductCarousel products={latest?.content ?? []} autoPlayMs={6000} />
+            <ProductCarousel products={latest ?? []} autoPlayMs={6000} />
+          )}
+        </Box>
+
+        {/* Popular products — stylish sliding carousel */}
+        <Box>
+          <Box sx={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', mb:3 }}>
+            <Box>
+              <Typography variant="h2" sx={{ fontWeight:700 }}>{t('home.popular_title')}</Typography>
+              <Typography color="text.secondary" sx={{ fontSize:'0.9rem' }}>{t('home.popular_subtitle')}</Typography>
+            </Box>
+            <Button component={Link} to="/products" variant="outlined" sx={{ fontWeight:600 }}>
+              {t('home.see_all')}
+            </Button>
+          </Box>
+          {loadingPopular ? (
+            <Grid container spacing={2}>
+              {Array.from({ length:4 }).map((_,i) => (
+                <Grid item xs={12} sm={6} md={3} key={i}>
+                  <Skeleton variant="rounded" height={280} sx={{ borderRadius:2 }} />
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <ProductCarousel products={popular ?? []} autoPlayMs={7000} />
           )}
         </Box>
 

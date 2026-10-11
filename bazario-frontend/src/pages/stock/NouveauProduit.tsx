@@ -7,8 +7,6 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import InfoIcon from '@mui/icons-material/Info';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
-import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +16,8 @@ import type { Category } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
 import ImageCropDialog from '@/components/common/ImageCropDialog';
+import ImageGalleryPreview from '@/components/common/ImageGalleryPreview';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 export default function NouveauProduit() {
   const navigate = useNavigate();
@@ -70,7 +70,7 @@ export default function NouveauProduit() {
       setShowNewCat(false);
       toast.success(`Catégorie "${cat.label}" ajoutée`);
     },
-    onError: () => toast.error('Catégorie déjà existante ou invalide'),
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Catégorie déjà existante ou invalide')),
   });
 
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,29 +105,32 @@ export default function NouveauProduit() {
   };
 
   const mutation = useMutation({
-    mutationFn: async () => {
-      const product = await productApi.create({
-        libelle: form.libelle,
-        description: form.description || undefined,
-        prix: parseFloat(form.prix),
-        prixActif: form.prixActif,
-        prixPromo: form.prixPromo ? parseFloat(form.prixPromo) : undefined,
-        reference: form.reference || undefined,
-        marque: form.marque || undefined,
-        categories: form.categories,
-        unite: form.unite,
-        quantiteMin: parseInt(form.quantiteMin) || 1,
-      });
-      if (pendingFiles.length > 0) {
-        await productApi.uploadImages(product.id, pendingFiles);
-      }
-    },
-    onSuccess: () => {
+    mutationFn: () => productApi.create({
+      libelle: form.libelle,
+      description: form.description || undefined,
+      prix: parseFloat(form.prix),
+      prixActif: form.prixActif,
+      prixPromo: form.prixPromo ? parseFloat(form.prixPromo) : undefined,
+      reference: form.reference || undefined,
+      marque: form.marque || undefined,
+      categories: form.categories,
+      unite: form.unite,
+      quantiteMin: parseInt(form.quantiteMin) || 1,
+    }),
+    onSuccess: async (product) => {
       qc.invalidateQueries({ queryKey: ['mes-produits'] });
       toast.success(isStockOp ? 'Produit créé — en attente d\'approbation admin' : 'Produit créé !');
+      // The product is already saved at this point — an image failure must not block navigation or look like the create failed
+      if (pendingFiles.length > 0) {
+        try {
+          await productApi.uploadImages(product.id, pendingFiles);
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, 'Produit créé, mais les photos n\'ont pas pu être envoyées — réessayez depuis la fiche produit'));
+        }
+      }
       navigate('/stock/produits');
     },
-    onError: () => toast.error('Erreur lors de la création'),
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Erreur lors de la création')),
   });
 
   return (
@@ -287,28 +290,12 @@ export default function NouveauProduit() {
           <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
             Photos du produit <Typography component="span" variant="caption" color="text.secondary">(optionnel)</Typography>
           </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'flex-start' }}>
-            {previews.map((src, idx) => (
-              <Box key={idx} sx={{ position: 'relative', width: 90, height: 90 }}>
-                <Box component="img" src={src} alt=""
-                  sx={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 2, border: '1px solid', borderColor: 'divider' }} />
-                <Tooltip title="Supprimer">
-                  <IconButton size="small" onClick={() => removePreview(idx)}
-                    sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'error.main', color: '#fff', '&:hover': { bgcolor: 'error.dark' }, width: 22, height: 22 }}>
-                    <DeleteIcon sx={{ fontSize: 14 }} />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            ))}
-            <Box onClick={() => fileInputRef.current?.click()}
-              sx={{ width: 90, height: 90, border: '2px dashed', borderColor: alpha('#009530', 0.4), borderRadius: 2,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#009530', gap: 0.3,
-                '&:hover': { bgcolor: alpha('#009530', 0.06), borderColor: '#009530' }, transition: 'all 0.2s' }}>
-              <AddPhotoAlternateIcon sx={{ fontSize: 26 }} />
-              <Typography variant="caption" fontWeight={600} lineHeight={1}>Ajouter</Typography>
-            </Box>
-          </Box>
+          <ImageGalleryPreview
+            images={previews.map((src, idx) => ({
+              key: String(idx), src, pending: true, onRemove: () => removePreview(idx),
+            }))}
+            onAddClick={() => fileInputRef.current?.click()}
+          />
           <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={handleFilePick} />
         </Box>
 

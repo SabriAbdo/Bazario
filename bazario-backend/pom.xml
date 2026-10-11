@@ -89,6 +89,13 @@
       <version>2.2.0</version>
     </dependency>
 
+    <!-- Cloudinary — persistent cloud storage for uploaded images -->
+    <dependency>
+      <groupId>com.cloudinary</groupId>
+      <artifactId>cloudinary-http44</artifactId>
+      <version>1.39.0</version>
+    </dependency>
+
     <!-- Test -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

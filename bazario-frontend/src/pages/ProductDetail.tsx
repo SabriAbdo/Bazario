@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Grid, Box, Typography, Button, Rating, Chip,
-  TextField, Divider, Alert,
+  TextField, Divider, Alert, IconButton,
 } from '@mui/material';
 import { ShoppingCart } from '@mui/icons-material';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '@/api/productApi';
@@ -14,6 +18,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { formatDate } from '@/utils/formatCurrency';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { buildCategoryDisplays, findCategoryDisplays } from '@/utils/categoryDisplay';
+import { recordProductView } from '@/utils/recentlyViewed';
 import PageLoader from '@/components/common/PageLoader';
 import { Category, Review } from '@/types';
 import toast from 'react-hot-toast';
@@ -27,6 +32,8 @@ export default function ProductDetail() {
   const qc = useQueryClient();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
   const [reviewRating, setReviewRating] = useState<number | null>(5);
   const [reviewComment, setReviewComment] = useState('');
 
@@ -47,6 +54,10 @@ export default function ProductDetail() {
     queryFn: () => categoryApi.getAll(),
   });
 
+  useEffect(() => {
+    if (product) recordProductView(product);
+  }, [product]);
+
   const submitReview = useMutation({
     mutationFn: () => reviewApi.createReview(productId, { rating: reviewRating!, comment: reviewComment }),
     onSuccess: () => {
@@ -57,12 +68,33 @@ export default function ProductDetail() {
     onError: () => toast.error("Impossible de publier l'avis"),
   });
 
+  const images = product?.images ?? [];
+
+  const goToPrevImage = () => setSelectedImage((i) => (i - 1 + images.length) % images.length);
+  const goToNextImage = () => setSelectedImage((i) => (i + 1) % images.length);
+
+  useEffect(() => {
+    setIsZoomed(false);
+    setZoomOrigin({ x: 50, y: 50 });
+  }, [selectedImage, productId]);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) return;
+      if (e.key === 'ArrowLeft') goToPrevImage();
+      else if (e.key === 'ArrowRight') goToNextImage();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [images.length]);
+
   if (isLoading) return <PageLoader />;
   if (!product) return <Alert severity="error">Produit non trouvé.</Alert>;
 
   const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixActif;
   const displayPrice = hasPromo ? product.prixPromo! : product.prix;
-  const images = product.images ?? [];
   const minQty = product.quantiteMin ?? 1;
   const productCats = findCategoryDisplays(buildCategoryDisplays(categories), product.categories);
 
@@ -77,12 +109,72 @@ export default function ProductDetail() {
         {/* Images */}
         <Grid item xs={12} md={6}>
           {images.length > 0 ? (
-            <Box
-              component="img"
-              src={productApi.imageUrl(images[selectedImage])}
-              alt={product.libelle}
-              sx={{ width: '100%', borderRadius: 3, aspectRatio: '1', objectFit: 'cover', bgcolor: 'grey.100' }}
-            />
+            <Box sx={{ position: 'relative' }}>
+              <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 3 }}>
+                <Box
+                  component="img"
+                  src={productApi.imageUrl(images[selectedImage])}
+                  alt={product.libelle}
+                  sx={{
+                    width: '100%', aspectRatio: '1', objectFit: 'contain', bgcolor: 'grey.100',
+                    display: 'block',
+                    transform: isZoomed ? 'scale(2.5)' : 'scale(1)',
+                    transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
+                    transition: isZoomed ? 'none' : 'transform 0.35s ease',
+                    userSelect: 'none', pointerEvents: 'none',
+                  }}
+                />
+                <Box
+                  onMouseMove={(e) => {
+                    if (!isZoomed) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setZoomOrigin({
+                      x: ((e.clientX - rect.left) / rect.width) * 100,
+                      y: ((e.clientY - rect.top) / rect.height) * 100,
+                    });
+                  }}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setZoomOrigin({
+                      x: ((e.clientX - rect.left) / rect.width) * 100,
+                      y: ((e.clientY - rect.top) / rect.height) * 100,
+                    });
+                    setIsZoomed((z) => !z);
+                  }}
+                  sx={{ position: 'absolute', inset: 0, zIndex: 1, cursor: isZoomed ? 'zoom-out' : 'zoom-in' }}
+                />
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setIsZoomed((z) => !z);
+                    if (isZoomed) setZoomOrigin({ x: 50, y: 50 });
+                  }}
+                  sx={{
+                    position: 'absolute', bottom: 8, right: 8, zIndex: 2,
+                    bgcolor: '#fff', border: '1px solid', borderColor: 'divider', boxShadow: 2,
+                    '&:hover': { bgcolor: '#f5f5f5' },
+                  }}
+                >
+                  {isZoomed ? <ZoomOutIcon sx={{ fontSize: 17 }} /> : <ZoomInIcon sx={{ fontSize: 17 }} />}
+                </IconButton>
+              </Box>
+              {images.length > 1 && (
+                <>
+                  <IconButton size="small" onClick={goToPrevImage}
+                    sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
+                      bgcolor: '#fff', border: '1px solid', borderColor: 'divider', boxShadow: 2,
+                      '&:hover': { bgcolor: '#f5f5f5' } }}>
+                    <ArrowBackIosNewIcon sx={{ fontSize: 15 }} />
+                  </IconButton>
+                  <IconButton size="small" onClick={goToNextImage}
+                    sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                      bgcolor: '#fff', border: '1px solid', borderColor: 'divider', boxShadow: 2,
+                      '&:hover': { bgcolor: '#f5f5f5' } }}>
+                    <ArrowForwardIosIcon sx={{ fontSize: 15 }} />
+                  </IconButton>
+                </>
+              )}
+            </Box>
           ) : (
             <Box sx={{ width: '100%', aspectRatio: '1', bgcolor: 'grey.100', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <ShoppingCart sx={{ fontSize: 64, color: 'text.disabled' }} />

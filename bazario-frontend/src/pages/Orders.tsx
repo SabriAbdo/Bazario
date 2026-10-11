@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { orderApi } from '@/api/orderApi';
 import { Link } from 'react-router-dom';
-import PageLoader from '@/components/common/PageLoader';
+import CardListSkeleton from '@/components/common/CardListSkeleton';
 import { Command, CommandStatus } from '@/types';
 import { Search } from '@mui/icons-material';
 
@@ -37,11 +37,9 @@ export default function Orders() {
   const [q, setQ] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['orders', 'all'],
-    queryFn: () => orderApi.getAll(),
+    queryKey: ['orders', 'mine'],
+    queryFn: () => orderApi.getMine(),
   });
-
-  if (isLoading) return <PageLoader />;
 
   const commands: Command[] = data?.content ?? [];
   const filtered = q.trim()
@@ -63,7 +61,9 @@ export default function Orders() {
         sx={{ mb: 3, maxWidth: 380 }}
         InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
       />
-      {!filtered.length ? (
+      {isLoading ? (
+        <CardListSkeleton rows={5} />
+      ) : !filtered.length ? (
         <Typography color="text.secondary">Aucune commande trouvée.</Typography>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

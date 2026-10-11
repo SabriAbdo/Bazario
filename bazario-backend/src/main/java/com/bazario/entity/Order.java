@@ -57,6 +57,11 @@ public class Order {
     @JoinColumn(name = "treated_by_id")
     private User treatedBy;
 
+    /** The Client account that placed this order, if the Visiteur was authenticated */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private User customer;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

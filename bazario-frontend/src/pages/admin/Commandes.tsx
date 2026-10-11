@@ -4,6 +4,7 @@ import {
   Chip, Button, LinearProgress, Alert, Tooltip, ButtonGroup, alpha,
   Dialog, DialogTitle, DialogContent, DialogActions, Divider, IconButton,
   TableSortLabel, TablePagination, TextField, InputAdornment,
+  FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CheckIcon from '@mui/icons-material/Check';
@@ -13,7 +14,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orderApi } from '../../api/orderApi';
-import type { Command, CommandStatus } from '../../types';
+import type { Command, CommandStatus, CommandType } from '../../types';
 import toast from 'react-hot-toast';
 import TableSkeleton from '../../components/common/TableSkeleton';
 
@@ -39,6 +40,8 @@ export default function AdminCommandes() {
   const [sortField, setSortField] = useState('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<CommandStatus | 'ALL'>('EN_ATTENTE');
+  const [typeFilter, setTypeFilter] = useState<CommandType | 'ALL'>('ALL');
 
   const handleSort = (field: string) => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -47,8 +50,8 @@ export default function AdminCommandes() {
   };
 
   const { data: result, isLoading, isError } = useQuery({
-    queryKey: ['admin-commands', page, rowsPerPage, sortField, sortDir, search],
-    queryFn: () => orderApi.getAll({ status: 'EN_ATTENTE', page, size: rowsPerPage, sort: sortField, sortDir, q: search || undefined }),
+    queryKey: ['admin-commands', page, rowsPerPage, sortField, sortDir, search, statusFilter],
+    queryFn: () => orderApi.getAll({ status: statusFilter === 'ALL' ? undefined : statusFilter, page, size: rowsPerPage, sort: sortField, sortDir, q: search || undefined }),
     refetchInterval: 30_000,
     staleTime: 0,
   });
@@ -67,7 +70,7 @@ export default function AdminCommandes() {
     setSelectedOrder(null);
   };
 
-  const display = result?.content ?? [];
+  const display = result?.content.filter((o) => typeFilter === 'ALL' || o.type === typeFilter) ?? [];
   const total = result?.totalElements ?? 0;
 
   const SortCell = ({ field, label }: { field: string; label: string }) => (
@@ -90,17 +93,36 @@ export default function AdminCommandes() {
         <Box>
           <Typography variant="h4">Commandes</Typography>
           <Typography variant="body2" color="text.secondary">
-            {total} en attente de traitement
+            {total} commande{total > 1 ? 's' : ''}
           </Typography>
         </Box>
       </Box>
 
-      <TextField
-        size="small" placeholder="Rechercher client, #..." value={search}
-        onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-        sx={{ mb: 2, maxWidth: 320 }}
-        InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
-      />
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        <TextField
+          size="small" placeholder="Rechercher client, #..." value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+          sx={{ maxWidth: 320, flex: 1 }}
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+        />
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Statut</InputLabel>
+          <Select value={statusFilter} label="Statut" onChange={(e) => { setStatusFilter(e.target.value as CommandStatus | 'ALL'); setPage(0); }}>
+            <MenuItem value="ALL">Tous les statuts</MenuItem>
+            {(Object.keys(STATUS_CHIP) as CommandStatus[]).map((s) => (
+              <MenuItem key={s} value={s}>{STATUS_CHIP[s].label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 180 }}>
+          <InputLabel>Type</InputLabel>
+          <Select value={typeFilter} label="Type" onChange={(e) => setTypeFilter(e.target.value as CommandType | 'ALL')}>
+            <MenuItem value="ALL">Tous les types</MenuItem>
+            <MenuItem value="COMMANDE">Commande</MenuItem>
+            <MenuItem value="DEMANDE_INFO">Demande info</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
 
       {isError && <Alert severity="error">Erreur de chargement.</Alert>}
 
@@ -176,7 +198,7 @@ export default function AdminCommandes() {
               </TableRow>
             ))}
             {!isLoading && display.length === 0 && (
-              <TableRow><TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>Aucune commande en attente.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>Aucune commande ne correspond aux filtres.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

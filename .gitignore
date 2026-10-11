@@ -28,6 +28,7 @@ Thumbs.db
 .env
 .env.local
 .env.production.local
+bazario-backend/local-env.ps1
 
 # Logs
 *.log

@@ -23,7 +23,7 @@ export default function Checkout() {
   if (items.length === 0) {
     return (
       <Box sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
-        <Alert severity="warning">Votre panier est vide. <Button onClick={() => navigate('/')}>Retour au catalogue</Button></Alert>
+        <Alert severity="warning">Votre panier est vide. <Button onClick={() => navigate('/products')}>Retour à la boutique</Button></Alert>
       </Box>
     );
   }
