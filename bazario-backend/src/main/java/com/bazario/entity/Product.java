@@ -68,7 +68,7 @@ public class Product {
     private boolean approvedByAdmin = false;
 
     /** Denormalized count of ProductLike rows, kept in sync on like/unlike */
-    @Column(name = "likes_count", nullable = false)
+    @Column(name = "likes_count", nullable = false, columnDefinition = "integer default 0")
     @Builder.Default
     private int likesCount = 0;
 
