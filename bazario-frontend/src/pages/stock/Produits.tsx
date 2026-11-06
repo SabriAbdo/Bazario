@@ -19,8 +19,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '../../api/productApi';
-import { formatCategoryList } from '../../utils/categoryDisplay';
-import type { Product } from '../../types';
+import { categoryApi } from '../../api/miscApi';
+import { buildCategoryDisplays, formatCategoryList } from '../../utils/categoryDisplay';
+import type { Category, Product } from '../../types';
 import toast from 'react-hot-toast';
 import TableSkeleton from '../../components/common/TableSkeleton';
 
@@ -55,7 +56,7 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
   );
 }
 
-function ProductInspectDialog({ product, onClose }: { product: Product; onClose: () => void }) {
+function ProductInspectDialog({ product, onClose, categoryDisplays }: { product: Product; onClose: () => void; categoryDisplays: ReturnType<typeof buildCategoryDisplays> }) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   return (
@@ -101,7 +102,7 @@ function ProductInspectDialog({ product, onClose }: { product: Product; onClose:
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
           <Box><Typography variant="caption" color="text.secondary">Référence</Typography><Typography fontFamily="monospace">{product.reference ?? '—'}</Typography></Box>
           <Box><Typography variant="caption" color="text.secondary">Marque</Typography><Typography>{product.marque ?? '—'}</Typography></Box>
-          <Box><Typography variant="caption" color="text.secondary">Catégorie</Typography><Typography>{formatCategoryList(product.categories)}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Catégorie</Typography><Typography>{formatCategoryList(product.categories, categoryDisplays)}</Typography></Box>
           <Box><Typography variant="caption" color="text.secondary">Unité · Qté min</Typography><Typography>{product.unite} · {product.quantiteMin}</Typography></Box>
           <Box>
             <Typography variant="caption" color="text.secondary">Prix</Typography>
@@ -156,6 +157,12 @@ export default function StockProduits() {
     queryKey: ['mes-produits', page, rowsPerPage, sortField, sortDir, search],
     queryFn: () => productApi.myProducts(page, rowsPerPage, sortField, sortDir, search || undefined),
   });
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: () => categoryApi.getAll(),
+  });
+  const categoryDisplays = buildCategoryDisplays(categories);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => productApi.delete(id),
@@ -251,7 +258,7 @@ export default function StockProduits() {
                   {p.reference && <Typography variant="caption" fontFamily="monospace" color="text.secondary">{p.reference}</Typography>}
                   {!p.marque && !p.reference && <Typography variant="caption" color="text.disabled">—</Typography>}
                 </TableCell>
-                <TableCell sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>{formatCategoryList(p.categories)}</TableCell>
+                <TableCell sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>{formatCategoryList(p.categories, categoryDisplays)}</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   {p.prix.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}
                   {p.prixPromo && <Typography variant="caption" color="secondary.main" display="block">{p.prixPromo.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</Typography>}
@@ -314,7 +321,7 @@ export default function StockProduits() {
         />
       </Paper>
 
-      {inspectedProduct && <ProductInspectDialog product={inspectedProduct} onClose={() => setInspectedProduct(null)} />}
+      {inspectedProduct && <ProductInspectDialog product={inspectedProduct} onClose={() => setInspectedProduct(null)} categoryDisplays={categoryDisplays} />}
     </Box>
   );
 }

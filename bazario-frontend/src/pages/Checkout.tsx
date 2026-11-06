@@ -8,9 +8,11 @@ import PersonIcon from '@mui/icons-material/Person';
 import PhoneIcon from '@mui/icons-material/Phone';
 import EmailIcon from '@mui/icons-material/Email';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { orderApi } from '../api/orderApi';
+import { productApi } from '../api/productApi';
 import toast from 'react-hot-toast';
 
 export default function Checkout() {
@@ -119,15 +121,27 @@ export default function Checkout() {
             {items.map((e) => {
               const hasPromo = e.product.prixActif && e.product.prixPromo != null && e.product.prixPromo > 0 && e.product.prixPromo < e.product.prix;
               const unitPrice = hasPromo ? e.product.prixPromo! : e.product.prix;
+              const image = e.product.images?.[0];
+              const imageUrl = image ? productApi.imageUrl(image) : null;
               return (
-                <Box key={e.product.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Box>
-                    <Typography variant="body2" fontWeight={600} sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {e.product.libelle}
-                    </Typography>
-                    <Chip label={`×${e.quantite}`} size="small" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
+                <Box key={e.product.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.25, justifyContent: 'space-between', mb: 1.25 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+                    <Box sx={{
+                      width: 40, height: 40, borderRadius: 1.5, overflow: 'hidden', flexShrink: 0,
+                      bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {imageUrl
+                        ? <Box component="img" src={imageUrl} alt={e.product.libelle} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <ImageNotSupportedIcon fontSize="small" color="disabled" />}
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={600} sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {e.product.libelle}
+                      </Typography>
+                      <Chip label={`×${e.quantite}`} size="small" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
+                    </Box>
                   </Box>
-                  <Typography variant="body2" fontWeight={700} color="primary.main">{fmt(unitPrice * e.quantite)}</Typography>
+                  <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ flexShrink: 0 }}>{fmt(unitPrice * e.quantite)}</Typography>
                 </Box>
               );
             })}

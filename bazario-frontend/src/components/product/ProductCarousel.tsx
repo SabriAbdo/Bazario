@@ -31,6 +31,9 @@ export default function ProductCarousel({ products, autoPlayMs = 5000 }: Props) 
   }, [products, perView]);
 
   const [[page, direction], setPageState] = useState<[number, number]>([0, 1]);
+  // Tracks whether a product opened from this carousel currently has its detail dialog open, so
+  // autoplay doesn't advance the page and silently unmount/close the dialog the user is viewing.
+  const [isAnyDetailsOpen, setIsAnyDetailsOpen] = useState(false);
 
   useEffect(() => { setPageState([0, 1]); }, [perView, products.length]);
 
@@ -39,10 +42,10 @@ export default function ProductCarousel({ products, autoPlayMs = 5000 }: Props) 
   }, [pages.length]);
 
   useEffect(() => {
-    if (pages.length <= 1 || !autoPlayMs) return;
+    if (pages.length <= 1 || !autoPlayMs || isAnyDetailsOpen) return;
     const id = setInterval(() => goTo(page + 1, 1), autoPlayMs);
     return () => clearInterval(id);
-  }, [page, pages.length, autoPlayMs, goTo]);
+  }, [page, pages.length, autoPlayMs, goTo, isAnyDetailsOpen]);
 
   if (!pages.length) return null;
 
@@ -82,7 +85,7 @@ export default function ProductCarousel({ products, autoPlayMs = 5000 }: Props) 
             >
               {pages[page].map((product) => (
                 <Box key={product.id}>
-                  <ProductCard product={product} />
+                  <ProductCard product={product} onDetailsOpenChange={setIsAnyDetailsOpen} />
                 </Box>
               ))}
             </Box>

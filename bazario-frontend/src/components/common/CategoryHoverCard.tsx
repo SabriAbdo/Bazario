@@ -15,9 +15,9 @@ const CategoryTooltip = styled(({ className, ...props }: React.ComponentProps<ty
     backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
     boxShadow: theme.shadows[8],
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 0,
-    maxWidth: 260,
+    maxWidth: 320,
     border: `1px solid ${theme.palette.divider}`,
   },
 }));
@@ -36,12 +36,27 @@ export default function CategoryHoverCard({ label, imageUrl, description, childr
       title={
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 1.5, gap: 1 }}>
           <Box sx={{
-            width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+            width: 220, height: 220, borderRadius: 3, overflow: 'hidden', flexShrink: 0,
             bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             {imageUrl
-              ? <Box component="img" src={resolveImageUrl(imageUrl)} alt={label} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              : <ImageNotSupportedIcon fontSize="small" color="disabled" />}
+              ? (
+                <Box
+                  component="img"
+                  src={resolveImageUrl(imageUrl)}
+                  alt={label}
+                  sx={{
+                    width: '100%', height: '100%', objectFit: 'contain',
+                    // Zoom-in reveal: image starts slightly scaled down and grows to full size as the popup appears.
+                    animation: 'categoryHoverZoomIn 0.25s ease-out',
+                    '@keyframes categoryHoverZoomIn': {
+                      from: { transform: 'scale(0.85)', opacity: 0.6 },
+                      to: { transform: 'scale(1)', opacity: 1 },
+                    },
+                  }}
+                />
+              )
+              : <ImageNotSupportedIcon fontSize="large" color="disabled" />}
           </Box>
           <Typography variant="subtitle2" fontWeight={700} textAlign="center">{label}</Typography>
           {description && (

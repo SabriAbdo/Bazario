@@ -1,6 +1,6 @@
 import { Card, CardContent, Typography, Box, Chip, IconButton, Tooltip } from '@mui/material';
 import { AddShoppingCart, Favorite, FavoriteBorder, BookmarkAdd, BookmarkAdded } from '@mui/icons-material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -19,15 +19,18 @@ import { useTranslation } from 'react-i18next';
 interface Props {
   product: Product;
   wishlisted?: boolean;
+  /** Notified whenever this card's detail dialog opens/closes (e.g. lets a parent carousel pause its autoplay). */
+  onDetailsOpenChange?: (open: boolean) => void;
 }
 
-export default function ProductCard({ product }: Props) {
+export default function ProductCard({ product, onDetailsOpenChange }: Props) {
   const addItem = useCartStore((s) => s.addItem);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isClient, ids: wishlistIds, toggle: toggleWishlist } = useWishlist();
   const { ids: likeIds, toggle: toggleLike } = useLikes();
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpenState] = useState(false);
+  const setDetailsOpen = (open: boolean) => { setDetailsOpenState(open); onDetailsOpenChange?.(open); };
   const [justAdded, setJustAdded] = useState(false);
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -38,6 +41,10 @@ export default function ProductCard({ product }: Props) {
   const displayPrice = hasPromo ? product.prixPromo! : product.prix;
   const image = product.images?.[0];
   const imageUrl = image ? productApi.imageUrl(image) : null;
+
+  // Defensive cleanup: if this card is unmounted while its dialog is open (e.g. the product list
+  // underneath changes), make sure the parent carousel is told the dialog is no longer open.
+  useEffect(() => () => { if (detailsOpen) onDetailsOpenChange?.(false); }, []);
 
   const handleAdd = (qty = 1) => {
     addItem(product, qty);
