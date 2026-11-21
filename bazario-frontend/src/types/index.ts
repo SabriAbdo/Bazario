@@ -71,7 +71,11 @@ export interface Category {
 export interface Product {
   id: number;
   libelle: string;
+  /** Arabic translation of `libelle`; optional, falls back to `libelle` when absent. */
+  libelleAr?: string | null;
   description: string | null;
+  /** Arabic translation of `description`; optional, falls back to `description` when absent. */
+  descriptionAr?: string | null;
   prix: number;
   prixActif: boolean;
   prixPromo: number | null;

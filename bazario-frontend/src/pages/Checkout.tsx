@@ -13,11 +13,14 @@ import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { orderApi } from '../api/orderApi';
 import { productApi } from '../api/productApi';
+import { localizeProduct } from '../utils/productLocalization';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 export default function Checkout() {
   const { items, clearCart, totalPrice } = useCartStore();
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ nom: '', prenom: '', adresse: '', telephone: '', email: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -123,6 +126,7 @@ export default function Checkout() {
               const unitPrice = hasPromo ? e.product.prixPromo! : e.product.prix;
               const image = e.product.images?.[0];
               const imageUrl = image ? productApi.imageUrl(image) : null;
+              const { libelle, isRtl } = localizeProduct(e.product, i18n.language);
               return (
                 <Box key={e.product.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.25, justifyContent: 'space-between', mb: 1.25 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
@@ -131,12 +135,12 @@ export default function Checkout() {
                       bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {imageUrl
-                        ? <Box component="img" src={imageUrl} alt={e.product.libelle} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ? <Box component="img" src={imageUrl} alt={libelle} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : <ImageNotSupportedIcon fontSize="small" color="disabled" />}
                     </Box>
                     <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight={600} sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {e.product.libelle}
+                      <Typography variant="body2" fontWeight={600} dir={isRtl ? 'rtl' : undefined} sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {libelle}
                       </Typography>
                       <Chip label={`×${e.quantite}`} size="small" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
                     </Box>

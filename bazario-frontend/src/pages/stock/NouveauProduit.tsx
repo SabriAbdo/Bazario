@@ -17,6 +17,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
 import ImageCropDialog from '@/components/common/ImageCropDialog';
 import ImageGalleryPreview from '@/components/common/ImageGalleryPreview';
+import BilingualField from '@/components/product/BilingualField';
 import { getApiErrorMessage } from '@/utils/apiError';
 
 export default function NouveauProduit() {
@@ -26,8 +27,8 @@ export default function NouveauProduit() {
   const isStockOp = user?.role === 'STOCK_OPERATEUR';
 
   const [form, setForm] = useState({
-    libelle: '', description: '', prix: '', prixActif: true,
-    prixPromo: '', reference: '', marque: '', categories: [] as string[], unite: 'PIECE', quantiteMin: '1',
+    libelle: '', libelleAr: '', description: '', descriptionAr: '', prixActif: true,
+    prix: '', prixPromo: '', reference: '', marque: '', categories: [] as string[], unite: 'PIECE', quantiteMin: '1',
   });
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -107,7 +108,9 @@ export default function NouveauProduit() {
   const mutation = useMutation({
     mutationFn: () => productApi.create({
       libelle: form.libelle,
+      libelleAr: form.libelleAr || undefined,
       description: form.description || undefined,
+      descriptionAr: form.descriptionAr || undefined,
       prix: parseFloat(form.prix),
       prixActif: form.prixActif,
       prixPromo: form.prixPromo ? parseFloat(form.prixPromo) : undefined,
@@ -161,10 +164,12 @@ export default function NouveauProduit() {
       <Paper sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
         {/* Libellé */}
         <Box>
-          <TextField
-            label="Libellé" required fullWidth value={form.libelle}
-            onChange={(e) => setForm({ ...form, libelle: e.target.value })}
-            placeholder="Ex: Disjoncteur iC60N 16A 2P"
+          <BilingualField
+            label="Libellé" required
+            valueFr={form.libelle} valueAr={form.libelleAr}
+            onChangeFr={(v) => setForm({ ...form, libelle: v })}
+            onChangeAr={(v) => setForm({ ...form, libelleAr: v })}
+            placeholderFr="Ex: Disjoncteur iC60N 16A 2P"
           />
           <Collapse in={debouncedLibelle.length >= 3 && duplicates.length > 0}>
             <Alert severity="warning" icon={<WarningAmberIcon fontSize="small" />} sx={{ mt: 1, fontSize: '0.82rem' }}>
@@ -181,10 +186,12 @@ export default function NouveauProduit() {
           </Collapse>
         </Box>
 
-        <TextField
-          label="Description" fullWidth multiline rows={3} value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="Détails techniques, caractéristiques..."
+        <BilingualField
+          label="Description" multiline rows={3}
+          valueFr={form.description} valueAr={form.descriptionAr}
+          onChangeFr={(v) => setForm({ ...form, description: v })}
+          onChangeAr={(v) => setForm({ ...form, descriptionAr: v })}
+          placeholderFr="Détails techniques, caractéristiques..."
         />
 
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2.5 }}>

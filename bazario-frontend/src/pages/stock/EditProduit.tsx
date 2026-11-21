@@ -15,13 +15,14 @@ import type { Category } from '../../types';
 import toast from 'react-hot-toast';
 import ImageCropDialog from '@/components/common/ImageCropDialog';
 import ImageGalleryPreview from '@/components/common/ImageGalleryPreview';
+import BilingualField from '@/components/product/BilingualField';
 
 export default function EditProduit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [form, setForm] = useState({
-    libelle: '', description: '', prix: '', prixActif: true,
+    libelle: '', libelleAr: '', description: '', descriptionAr: '', prix: '', prixActif: true,
     prixPromo: '', reference: '', marque: '', categories: [] as string[], unite: 'PIECE', quantiteMin: '1',
   });
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -61,7 +62,9 @@ export default function EditProduit() {
     if (product) {
       setForm({
         libelle: product.libelle,
+        libelleAr: product.libelleAr ?? '',
         description: product.description ?? '',
+        descriptionAr: product.descriptionAr ?? '',
         prix: String(product.prix),
         prixActif: product.prixActif,
         prixPromo: product.prixPromo != null ? String(product.prixPromo) : '',
@@ -115,7 +118,9 @@ export default function EditProduit() {
     mutationFn: async () => {
       await productApi.update(Number(id), {
         libelle: form.libelle,
+        libelleAr: form.libelleAr || undefined,
         description: form.description || undefined,
+        descriptionAr: form.descriptionAr || undefined,
         prix: parseFloat(form.prix),
         prixActif: form.prixActif,
         prixPromo: form.prixPromo ? parseFloat(form.prixPromo) : undefined,
@@ -171,13 +176,17 @@ export default function EditProduit() {
       </Box>
 
       <Paper sx={{ p: 4, maxWidth: 620, borderRadius: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-        <TextField
-          label="Libellé" required fullWidth value={form.libelle}
-          onChange={(e) => setForm({ ...form, libelle: e.target.value })}
+        <BilingualField
+          label="Libellé" required
+          valueFr={form.libelle} valueAr={form.libelleAr}
+          onChangeFr={(v) => setForm({ ...form, libelle: v })}
+          onChangeAr={(v) => setForm({ ...form, libelleAr: v })}
         />
-        <TextField
-          label="Description" fullWidth multiline rows={3} value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        <BilingualField
+          label="Description" multiline rows={3}
+          valueFr={form.description} valueAr={form.descriptionAr}
+          onChangeFr={(v) => setForm({ ...form, description: v })}
+          onChangeAr={(v) => setForm({ ...form, descriptionAr: v })}
         />
         <TextField
           label="Prix (MAD)" required fullWidth type="number" value={form.prix}

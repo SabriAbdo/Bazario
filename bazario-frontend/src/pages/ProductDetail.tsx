@@ -18,10 +18,13 @@ import { useCartStore } from '@/store/useCartStore';
 import { formatDate } from '@/utils/formatCurrency';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { buildCategoryDisplays, findCategoryDisplays } from '@/utils/categoryDisplay';
+import { useLocalizedProduct } from '@/utils/productLocalization';
 import { recordProductView } from '@/utils/recentlyViewed';
+import { localizeProduct } from '@/utils/productLocalization';
 import PageLoader from '@/components/common/PageLoader';
 import { Category, Review } from '@/types';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +33,7 @@ export default function ProductDetail() {
   const isAuthenticated = !!token;
   const { addItem } = useCartStore();
   const qc = useQueryClient();
+  const { i18n } = useTranslation();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -93,6 +97,7 @@ export default function ProductDetail() {
   if (isLoading) return <PageLoader />;
   if (!product) return <Alert severity="error">Produit non trouvé.</Alert>;
 
+  const { libelle, description, isRtl } = localizeProduct(product, i18n.language);
   const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixActif;
   const displayPrice = hasPromo ? product.prixPromo! : product.prix;
   const minQty = product.quantiteMin ?? 1;
@@ -114,7 +119,7 @@ export default function ProductDetail() {
                 <Box
                   component="img"
                   src={productApi.imageUrl(images[selectedImage])}
-                  alt={product.libelle}
+                  alt={libelle}
                   sx={{
                     width: '100%', aspectRatio: '1', objectFit: 'contain', bgcolor: 'grey.100',
                     display: 'block',
@@ -197,7 +202,7 @@ export default function ProductDetail() {
 
         {/* Info */}
         <Grid item xs={12} md={6}>
-          <Typography variant="h2" gutterBottom>{product.libelle}</Typography>
+          <Typography variant="h2" gutterBottom dir={isRtl ? 'rtl' : undefined}>{libelle}</Typography>
           <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
             {productCats.map((c) => <Chip key={c.key} label={c.label} size="small" />)}
             {product.marque && <Chip label={product.marque} size="small" variant="outlined" />}
@@ -228,8 +233,8 @@ export default function ProductDetail() {
             </Typography>
           )}
 
-          {product.description && (
-            <Typography color="text.secondary" sx={{ mb: 3 }}>{product.description}</Typography>
+          {description && (
+            <Typography color="text.secondary" dir={isRtl ? 'rtl' : undefined} sx={{ mb: 3 }}>{description}</Typography>
           )}
 
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>

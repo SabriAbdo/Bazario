@@ -5,7 +5,9 @@ const BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL ?? 'http://localhos
 
 export interface CreateProductRequest {
   libelle: string;
+  libelleAr?: string;
   description?: string;
+  descriptionAr?: string;
   prix: number;
   prixActif: boolean;
   prixPromo?: number;

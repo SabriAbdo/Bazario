@@ -4,11 +4,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useCartStore } from '@/store/useCartStore';
 import { productApi } from '@/api/productApi';
+import { localizeProduct } from '@/utils/productLocalization';
 import { useTranslation } from 'react-i18next';
 
 export default function Cart() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { items, updateQty, removeItem, clearCart, totalPrice } = useCartStore();
 
   const total = totalPrice();
@@ -33,6 +34,7 @@ export default function Cart() {
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {items.map((entry) => {
             const { product, quantite } = entry;
+            const { libelle, isRtl } = localizeProduct(product, i18n.language);
             const imageUrl = product.images?.[0] ? productApi.imageUrl(product.images[0]) : null;
             const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixActif;
             const unitPrice = hasPromo ? product.prixPromo! : product.prix;
@@ -40,7 +42,7 @@ export default function Cart() {
             return (
               <Paper key={product.id} sx={{ p: 2, borderRadius: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
                 {imageUrl ? (
-                  <Box component="img" src={imageUrl} alt={product.libelle}
+                  <Box component="img" src={imageUrl} alt={libelle}
                     sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1.5, flexShrink: 0 }} />
                 ) : (
                   <Box sx={{ width: 72, height: 72, bgcolor: 'grey.100', borderRadius: 1.5, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -49,7 +51,7 @@ export default function Cart() {
                 )}
 
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography fontWeight={600} noWrap>{product.libelle}</Typography>
+                  <Typography fontWeight={600} noWrap dir={isRtl ? 'rtl' : undefined}>{libelle}</Typography>
                   {product.marque && (
                     <Typography variant="caption" color="text.secondary">{product.marque}</Typography>
                   )}

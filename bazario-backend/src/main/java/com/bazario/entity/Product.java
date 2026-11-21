@@ -23,11 +23,19 @@ public class Product {
     @Column(nullable = false, length = 255)
     private String libelle;
 
+    /** Arabic translation of {@link #libelle}; optional, falls back to {@link #libelle} when absent. */
+    @Column(name = "libelle_ar", length = 255)
+    private String libelleAr;
+
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal prix;
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    /** Arabic translation of {@link #description}; optional, falls back to {@link #description} when absent. */
+    @Column(name = "description_ar", columnDefinition = "TEXT")
+    private String descriptionAr;
 
     @Column(name = "prix_actif", nullable = false)
     @Builder.Default

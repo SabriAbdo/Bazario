@@ -27,7 +27,9 @@ public class ProductDto {
 
     public record CreateRequest(
             @NotBlank @Size(max = 255) String libelle,
+            @Size(max = 255) String libelleAr,
             String description,
+            String descriptionAr,
             @NotNull @DecimalMin("0.01") @Digits(integer = 16, fraction = 2) BigDecimal prix,
             Boolean prixActif,
             @DecimalMin("0.01") @Digits(integer = 16, fraction = 2) BigDecimal prixPromo,
@@ -40,7 +42,9 @@ public class ProductDto {
 
     public record UpdateRequest(
             @Size(max = 255) String libelle,
+            @Size(max = 255) String libelleAr,
             String description,
+            String descriptionAr,
             @DecimalMin("0.01") @Digits(integer = 16, fraction = 2) BigDecimal prix,
             Boolean prixActif,
             @DecimalMin("0.01") @Digits(integer = 16, fraction = 2) BigDecimal prixPromo,
@@ -54,7 +58,9 @@ public class ProductDto {
     public record Response(
             Long id,
             String libelle,
+            String libelleAr,
             String description,
+            String descriptionAr,
             BigDecimal prix,
             boolean prixActif,
             BigDecimal prixPromo,

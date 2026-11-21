@@ -21,6 +21,7 @@ import { categoryApi } from '../api/miscApi';
 import { useAuthStore } from '../store/useAuthStore';
 import type { Product, ProductComment, ProductVariant, VariantType, Category } from '../types';
 import { buildCategoryDisplays, findCategoryDisplays } from '../utils/categoryDisplay';
+import { useLocalizedProduct } from '../utils/productLocalization';
 import toast from 'react-hot-toast';
 
 export const UNITE_LABEL: Record<string, string> = {
@@ -149,6 +150,7 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
   const categoryDisplays = buildCategoryDisplays(categories);
   const productCats = findCategoryDisplays(categoryDisplays, product.categories);
   const cat = productCats[0];
+  const { libelle, description, isRtl } = useLocalizedProduct(product);
   const uniteLabel = UNITE_LABEL[product.unite ?? 'PIECE'] ?? 'pce';
   const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixPromo < product.prix;
   const [imgIdx, setImgIdx] = useState(0);
@@ -227,7 +229,7 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
               <>
                 <Box component="img"
                   src={productApi.imageUrl(images[imgIdx])}
-                  alt={product.libelle}
+                  alt={libelle}
                   sx={{
                     maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',
                     transform: isZoomed ? 'scale(2.5)' : 'scale(1)',
@@ -339,9 +341,9 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
         {/* ── Right: product info ── */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, bgcolor: '#fff', p: { xs: 2, sm: 2.5 } }}>
 
-          <Typography variant="h5" fontWeight={700}
+          <Typography variant="h5" fontWeight={700} dir={isRtl ? 'rtl' : undefined}
             sx={{ lineHeight: 1.35, mb: 1, fontSize: { xs: '1rem', sm: '1.2rem' }, color: '#222' }}>
-            {product.libelle}
+            {libelle}
           </Typography>
 
           {/* Reference + Marque */}
@@ -362,10 +364,10 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
             </Box>
           )}
 
-          {product.description && (
-            <Typography variant="body2" color="text.secondary"
+          {description && (
+            <Typography variant="body2" color="text.secondary" dir={isRtl ? 'rtl' : undefined}
               sx={{ lineHeight: 1.75, mb: 2, fontSize: '0.87rem', borderBottom: '1px solid', borderColor: 'divider', pb: 2 }}>
-              {product.description}
+              {description}
             </Typography>
           )}
 

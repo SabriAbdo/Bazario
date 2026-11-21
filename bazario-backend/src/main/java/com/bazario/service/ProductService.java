@@ -196,7 +196,9 @@ public class ProductService {
 
         Product product = Product.builder()
                 .libelle(req.libelle())
+                .libelleAr(req.libelleAr())
                 .description(req.description())
+                .descriptionAr(req.descriptionAr())
                 .prix(req.prix())
                 .prixActif(req.prixActif() != null ? req.prixActif() : true)
                 .prixPromo(req.prixPromo())
@@ -243,7 +245,9 @@ public class ProductService {
         }
 
         if (req.libelle() != null) product.setLibelle(req.libelle());
+        if (req.libelleAr() != null) product.setLibelleAr(req.libelleAr());
         if (req.description() != null) product.setDescription(req.description());
+        if (req.descriptionAr() != null) product.setDescriptionAr(req.descriptionAr());
         if (req.prix() != null) product.setPrix(req.prix());
         if (req.prixActif() != null) product.setPrixActif(req.prixActif());
         if (req.prixPromo() != null) product.setPrixPromo(req.prixPromo());
@@ -418,7 +422,7 @@ public class ProductService {
                 ? p.getCategories().stream().map(Category::getSlug).toList()
                 : List.of();
         return new ProductDto.Response(
-                p.getId(), p.getLibelle(), p.getDescription(), p.getPrix(),
+                p.getId(), p.getLibelle(), p.getLibelleAr(), p.getDescription(), p.getDescriptionAr(), p.getPrix(),
                 p.isPrixActif(), p.getPrixPromo(),
                 p.getReference(), p.getMarque(), categorySlugs,
                 p.getUnite() != null ? p.getUnite() : com.bazario.entity.Unite.PIECE,

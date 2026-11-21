@@ -10,6 +10,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { productApi } from '@/api/productApi';
 import { categoryApi } from '@/api/miscApi';
 import { buildCategoryDisplays, findCategoryDisplays } from '@/utils/categoryDisplay';
+import { useLocalizedProduct } from '@/utils/productLocalization';
 import ProductDetailDialog from '@/components/ProductDetailDialog';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useLikes } from '@/hooks/useLikes';
@@ -37,6 +38,7 @@ export default function ProductCard({ product, onDetailsOpenChange }: Props) {
     queryFn: () => categoryApi.getAll(),
   });
   const productCat = findCategoryDisplays(buildCategoryDisplays(categories), product.categories)[0];
+  const { libelle, isRtl } = useLocalizedProduct(product);
   const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixActif;
   const displayPrice = hasPromo ? product.prixPromo! : product.prix;
   const image = product.images?.[0];
@@ -109,7 +111,7 @@ export default function ProductCard({ product, onDetailsOpenChange }: Props) {
 
         <Box onClick={() => setDetailsOpen(true)} sx={{ display: 'block', cursor: 'pointer', flexShrink: 0 }}>
           {imageUrl ? (
-            <Box component="img" src={imageUrl} alt={product.libelle}
+            <Box component="img" src={imageUrl} alt={libelle}
               sx={{ width: '100%', height: 200, objectFit: 'cover' }} />
           ) : (
             <Box sx={{ width: '100%', height: 200, bgcolor: 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -119,10 +121,10 @@ export default function ProductCard({ product, onDetailsOpenChange }: Props) {
         </Box>
 
         <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5, p: 1.5 }}>
-          <Typography variant="subtitle2" fontWeight={600} noWrap title={product.libelle}
-            onClick={() => setDetailsOpen(true)}
+          <Typography variant="subtitle2" fontWeight={600} noWrap title={libelle}
+            onClick={() => setDetailsOpen(true)} dir={isRtl ? 'rtl' : undefined}
             sx={{ color: 'text.primary', lineHeight: 1.3, cursor: 'pointer' }}>
-            {product.libelle}
+            {libelle}
           </Typography>
           {product.marque && (
             <Typography variant="caption" color="text.secondary" noWrap>{product.marque}</Typography>

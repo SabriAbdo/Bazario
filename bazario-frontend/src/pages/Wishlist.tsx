@@ -9,9 +9,11 @@ import { categoryApi } from '@/api/miscApi';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { buildCategoryDisplays, ALL_CATEGORY } from '@/utils/categoryDisplay';
+import { localizeProduct } from '@/utils/productLocalization';
 import ProductDetailDialog from '@/components/ProductDetailDialog';
 import { ProductCard } from './Catalogue';
 import type { Category, Product } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 export default function Wishlist() {
   const { ids } = useWishlist();
@@ -20,6 +22,7 @@ export default function Wishlist() {
   const qc = useQueryClient();
   const addItem = useCartStore((s) => s.addItem);
   const { user } = useAuthStore();
+  const { i18n } = useTranslation();
   const isStockOrAdmin = user?.role === 'STOCK_OPERATEUR' || user?.role === 'ADMIN';
 
   const [justAdded, setJustAdded] = useState<Set<number>>(new Set());
@@ -42,7 +45,8 @@ export default function Wishlist() {
 
   const handleAdd = (product: Product, qty = 1) => {
     addItem(product, qty);
-    toast.success(`${qty > 1 ? `${qty}× ` : ''}${product.libelle} ajouté au panier`, { duration: 1800 });
+    const { libelle } = localizeProduct(product, i18n.language);
+    toast.success(`${qty > 1 ? `${qty}× ` : ''}${libelle} ajouté au panier`, { duration: 1800 });
     setJustAdded((prev) => { const s = new Set(prev); s.add(product.id); return s; });
     setTimeout(() => setJustAdded((prev) => { const s = new Set(prev); s.delete(product.id); return s; }), 2000);
   };
