@@ -161,30 +161,15 @@ export default function AdminProducts() {
   });
   const bestSellerMutation = useMutation({
     mutationFn: ({ id, value }: { id: number; value: boolean }) => adminApi.setFeaturedBestSeller(id, value),
-    onSuccess: (_, { value }) => {
-      qc.invalidateQueries({ queryKey: ['admin', 'products'] });
-      // Keep /Accueil's "best sellers" carousel in sync with this toggle.
-      qc.invalidateQueries({ queryKey: ['products', 'home-best-sellers'] });
-      toast.success(value ? 'Ajouté aux meilleures ventes' : 'Retiré des meilleures ventes');
-    },
+    onSuccess: (_, { value }) => { qc.invalidateQueries({ queryKey: ['admin', 'products'] }); toast.success(value ? 'Ajouté aux meilleures ventes' : 'Retiré des meilleures ventes'); },
   });
   const newArrivalMutation = useMutation({
     mutationFn: ({ id, value }: { id: number; value: boolean }) => adminApi.setFeaturedNewArrival(id, value),
-    onSuccess: (_, { value }) => {
-      qc.invalidateQueries({ queryKey: ['admin', 'products'] });
-      // Keep /Accueil's "new arrivals" carousel in sync with this toggle.
-      qc.invalidateQueries({ queryKey: ['products', 'home-latest'] });
-      toast.success(value ? 'Ajouté aux nouvelles arrivées' : 'Retiré des nouvelles arrivées');
-    },
+    onSuccess: (_, { value }) => { qc.invalidateQueries({ queryKey: ['admin', 'products'] }); toast.success(value ? 'Ajouté aux nouvelles arrivées' : 'Retiré des nouvelles arrivées'); },
   });
   const popularMutation = useMutation({
     mutationFn: ({ id, value }: { id: number; value: boolean }) => adminApi.setFeaturedPopular(id, value),
-    onSuccess: (_, { value }) => {
-      qc.invalidateQueries({ queryKey: ['admin', 'products'] });
-      // Keep /Accueil's "popular products" carousel in sync with this toggle.
-      qc.invalidateQueries({ queryKey: ['products', 'home-popular'] });
-      toast.success(value ? 'Ajouté aux produits populaires' : 'Retiré des produits populaires');
-    },
+    onSuccess: (_, { value }) => { qc.invalidateQueries({ queryKey: ['admin', 'products'] }); toast.success(value ? 'Ajouté aux produits populaires' : 'Retiré des produits populaires'); },
   });
 
   const displayData = filterApproval === 'pending' ? pendingData : data;

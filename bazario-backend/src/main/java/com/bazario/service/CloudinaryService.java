@@ -3,10 +3,8 @@ package com.bazario.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.Map;
@@ -24,11 +22,6 @@ public class CloudinaryService {
 
     /** Uploads a file under the given folder (e.g. "bazario/products/12") and returns its public HTTPS URL. */
     public String upload(MultipartFile file, String folder) {
-        Object cloudName = cloudinary.config.cloudName;
-        if (cloudName == null || cloudName.toString().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "Le service d'upload d'images n'est pas configuré (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET manquants)");
-        }
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(

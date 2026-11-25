@@ -20,7 +20,6 @@ public class CategoryService {
 
     private final CategorieRepository repo;
     private final CloudinaryService cloudinaryService;
-    private final ActivityLogService activityLogService;
 
     public List<CategoryDto.Response> getAll() {
         return repo.findAll().stream().map(this::toDto).toList();
@@ -31,20 +30,16 @@ public class CategoryService {
         if (repo.existsBySlug(slug)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Catégorie déjà existante");
         }
-        Category saved = repo.save(Category.builder().slug(slug).label(req.label()).description(req.description()).build());
-        activityLogService.log("Creation categorie", "Categorie creee: " + saved.getLabel());
+        Category saved = repo.save(Category.builder().slug(slug).label(req.label()).build());
         return toDto(saved);
     }
 
     public CategoryDto.Response update(Long id, CategoryDto.UpdateRequest req) {
         Category cat = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Catégorie introuvable"));
-        if (req.label()       != null && !req.label().isBlank()) cat.setLabel(req.label());
-        if (req.imageUrl()    != null) cat.setImageUrl(req.imageUrl());
-        if (req.description() != null) cat.setDescription(req.description());
-        CategoryDto.Response dto = toDto(repo.save(cat));
-        activityLogService.log("Modification categorie", "Categorie modifiee: " + cat.getLabel());
-        return dto;
+        if (req.label()    != null && !req.label().isBlank()) cat.setLabel(req.label());
+        if (req.imageUrl() != null) cat.setImageUrl(req.imageUrl());
+        return toDto(repo.save(cat));
     }
 
     public CategoryDto.Response uploadImage(Long id, MultipartFile file) {
@@ -63,11 +58,10 @@ public class CategoryService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Catégorie introuvable"));
         repo.unlinkFromProducts(id);
         repo.delete(cat);
-        activityLogService.log("Suppression categorie", "Categorie supprimee: " + cat.getLabel());
     }
 
     private CategoryDto.Response toDto(Category c) {
-        return new CategoryDto.Response(c.getId(), c.getSlug(), c.getLabel(), c.getImageUrl(), c.getDescription());
+        return new CategoryDto.Response(c.getId(), c.getSlug(), c.getLabel(), c.getImageUrl());
     }
 
     /** Converts a display label to an uppercase slug, e.g. "Câbles & Fils" → "CABLES_FILS" */

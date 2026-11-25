@@ -48,7 +48,9 @@ export default function ImageGalleryPreview({
         tabIndex={images.length > 1 ? 0 : -1}
         onKeyDown={handleKeyDown}
         sx={{
-          position: 'relative', width: 180, height: 180, borderRadius: 2, overflow: 'hidden',
+          position: 'relative', width: 180, height: 180,
+          minWidth: 180, minHeight: 180, maxWidth: 180, maxHeight: 180,
+          flexShrink: 0, boxSizing: 'border-box', borderRadius: 2, overflow: 'hidden',
           bgcolor: 'grey.100', outline: 'none',
           '&:focus-visible': { boxShadow: `0 0 0 2px ${alpha(accentColor, 0.5)}` },
         }}
@@ -123,7 +125,8 @@ export default function ImageGalleryPreview({
           <Box key={img.key} component="img" src={img.src} alt=""
             onClick={() => setIdx(i)}
             sx={{
-              width: 48, height: 48, objectFit: 'cover', flexShrink: 0, borderRadius: 1.5,
+              width: 48, height: 48, minWidth: 48, minHeight: 48, maxWidth: 48, maxHeight: 48,
+              objectFit: 'cover', flexShrink: 0, boxSizing: 'border-box', borderRadius: 1.5,
               cursor: 'pointer', bgcolor: '#fff',
               border: '2px solid', borderColor: i === idx ? accentColor : 'divider',
               opacity: i === idx ? 1 : 0.6, transition: 'all 0.18s',
@@ -132,7 +135,8 @@ export default function ImageGalleryPreview({
         ))}
         <Tooltip title="Ajouter des photos">
           <Box onClick={onAddClick} sx={{
-            width: 48, height: 48, flexShrink: 0, border: '2px dashed', borderColor: alpha(accentColor, 0.4),
+            width: 48, height: 48, minWidth: 48, minHeight: 48, maxWidth: 48, maxHeight: 48,
+            flexShrink: 0, boxSizing: 'border-box', border: '2px dashed', borderColor: alpha(accentColor, 0.4),
             borderRadius: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', color: accentColor,
             '&:hover': { bgcolor: alpha(accentColor, 0.06), borderColor: accentColor },

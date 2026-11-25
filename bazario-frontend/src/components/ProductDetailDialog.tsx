@@ -191,7 +191,7 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
   }, [images.length]);
 
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth
+    <Dialog open onClose={onClose} maxWidth="lg" fullWidth
       PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden', maxHeight: '95vh' } }}>
 
       {/* ── Header bar ── */}
@@ -215,14 +215,14 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
         {/* ── Left: image panel ── */}
         <Box sx={{
           flexShrink: 0, bgcolor: '#fff',
-          width: { xs: '100%', sm: 360 },
+          width: { xs: '100%', sm: '55%', md: '58%' },
           borderRight: { sm: '1px solid' }, borderColor: { sm: 'divider' },
           display: 'flex', flexDirection: 'column',
         }}>
           {/* Main image */}
           <Box sx={{
             position: 'relative', overflow: 'hidden',
-            height: { xs: 260, sm: 320 },
+            height: { xs: 320, sm: 440, md: 520 },
             display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2,
           }}>
             {images.length > 0 ? (
@@ -327,7 +327,7 @@ export default function ProductDetailDialog({ product, added, onAdd, onClose }: 
                 <Box key={i} component="img" src={productApi.imageUrl(url)} alt=""
                   onClick={() => setImgIdx(i)}
                   sx={{
-                    width: 60, height: 60, objectFit: 'contain', flexShrink: 0, p: 0.5,
+                    width: 72, height: 72, objectFit: 'contain', flexShrink: 0, p: 0.5,
                     border: '2px solid', borderColor: i === imgIdx ? cat.color : 'divider',
                     borderRadius: 1, cursor: 'pointer', bgcolor: '#fff',
                     opacity: i === imgIdx ? 1 : 0.55, transition: 'all 0.18s',

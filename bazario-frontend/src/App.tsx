@@ -76,10 +76,10 @@ export default function App() {
             <Route path="/checkout/succes" element={<CheckoutSucces />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/orders" element={<Protected roles={['CLIENT']}><Orders /></Protected>} />
-            <Route path="/orders/:id" element={<Protected roles={['CLIENT']}><OrderDetail /></Protected>} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/orders/:id" element={<OrderDetail />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/wishlist" element={<Protected roles={['CLIENT']}><Wishlist /></Protected>} />
+            <Route path="/wishlist" element={<Wishlist />} />
 
             {/* Operateur */}
             <Route path="/operateur/commandes" element={<Protected roles={['OPERATEUR', 'ADMIN']}><OperateurCommandes /></Protected>} />
