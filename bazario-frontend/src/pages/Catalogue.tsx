@@ -49,6 +49,7 @@ import { useLikes } from '@/hooks/useLikes';
 import toast from 'react-hot-toast';
 import type { Category, Product } from '../types';
 import { useTranslation } from 'react-i18next';
+import { useLocalizedProduct } from '../utils/productLocalization';
 
 const PAGE_SIZE = 24;
 
@@ -61,6 +62,7 @@ export function ProductCard({ product, categoryDisplays, added, onAdd, onDetails
   const cat = productCats[0];
   const catLabel = productCats.length > 1 ? `${cat.label} +${productCats.length - 1}` : cat.label;
   const uniteLabel = UNITE_LABEL[product.unite ?? 'PIECE'] ?? 'pce';
+  const { libelle, description, isRtl } = useLocalizedProduct(product);
   const hasPromo = product.prixPromo != null && product.prixPromo > 0 && product.prixPromo < product.prix;
   const [confirming, setConfirming] = useState(false);
   const navigate = useNavigate();
@@ -120,7 +122,7 @@ export function ProductCard({ product, categoryDisplays, added, onAdd, onDetails
         <Box onClick={onDetails} sx={{ height: 160, overflow: 'hidden', position: 'relative', bgcolor: '#f5f5f5', cursor: 'pointer' }}>
           <Box component="img"
             src={productApi.imageUrl(product.images[0])}
-            alt={product.libelle}
+            alt={libelle}
             sx={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.04)' } }}
           />
           <Box sx={{
@@ -151,9 +153,9 @@ export function ProductCard({ product, categoryDisplays, added, onAdd, onDetails
       )}
 
       <CardContent sx={{ flexGrow: 1, px: 2, py: 1.5 }}>
-        <Typography variant="subtitle1" fontWeight={700} gutterBottom
+        <Typography variant="subtitle1" fontWeight={700} gutterBottom dir={isRtl ? 'rtl' : undefined}
           sx={{ lineHeight: 1.3, fontSize: '0.95rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-          {product.libelle}
+          {libelle}
         </Typography>
 
         {/* Reference + Marque chips */}
@@ -172,10 +174,10 @@ export function ProductCard({ product, categoryDisplays, added, onAdd, onDetails
           </Box>
         )}
 
-        {product.description && (
-          <Typography variant="body2" color="text.secondary"
+        {description && (
+          <Typography variant="body2" color="text.secondary" dir={isRtl ? 'rtl' : undefined}
             sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontSize: '0.8rem', lineHeight: 1.4 }}>
-            {product.description}
+            {description}
           </Typography>
         )}
       </CardContent>

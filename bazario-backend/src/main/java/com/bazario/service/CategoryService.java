@@ -61,7 +61,7 @@ public class CategoryService {
     }
 
     private CategoryDto.Response toDto(Category c) {
-        return new CategoryDto.Response(c.getId(), c.getSlug(), c.getLabel(), c.getImageUrl());
+        return new CategoryDto.Response(c.getId(), c.getSlug(), c.getLabel(), c.getImageUrl(), c.getDescription());
     }
 
     /** Converts a display label to an uppercase slug, e.g. "Câbles & Fils" → "CABLES_FILS" */

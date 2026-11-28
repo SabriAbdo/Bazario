@@ -421,7 +421,7 @@ public class AdminService {
                 ? p.getCategories().stream().map(Category::getSlug).toList()
                 : java.util.List.of();
         return new com.bazario.dto.ProductDto.Response(
-                p.getId(), p.getLibelle(), p.getDescription(), p.getPrix(),
+                p.getId(), p.getLibelle(), p.getLibelleAr(), p.getDescription(), p.getDescriptionAr(), p.getPrix(),
                 p.isPrixActif(), p.getPrixPromo(),
                 p.getReference(), p.getMarque(), categorySlugs,
                 p.getUnite() != null ? p.getUnite() : com.bazario.entity.Unite.PIECE,
